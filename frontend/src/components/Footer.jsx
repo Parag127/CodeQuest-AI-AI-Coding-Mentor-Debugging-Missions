@@ -1,7 +1,7 @@
 import React from 'react';
 import { Layers, GitBranch, Globe, ExternalLink, Heart, ShieldCheck } from 'lucide-react';
 
-export default function Footer({ backendStatus, onNavigateLogin }) {
+export default function Footer({ backendStatus, onNavigateLogin, onNavigateEditor }) {
   return (
     <footer className="footer-section">
       <div className="container">
@@ -37,11 +37,15 @@ export default function Footer({ backendStatus, onNavigateLogin }) {
           <div>
             <h4 className="footer-col-title">Debugging Missions</h4>
             <ul className="footer-links-list">
-              <li className="footer-link-item"><a href="#missions">Off-by-One Traversal</a></li>
-              <li className="footer-link-item"><a href="#missions">Null Safety Guards</a></li>
-              <li className="footer-link-item"><a href="#missions">Case-Insensitive Palindromes</a></li>
+              <li className="footer-link-item">
+                <a href="/editor" onClick={(e) => { e.preventDefault(); onNavigateEditor && onNavigateEditor(); }}>
+                  Interactive Code Editor →
+                </a>
+              </li>
+              <li className="footer-link-item"><a href="#missions">Find Largest Number</a></li>
+              <li className="footer-link-item"><a href="#missions">Reverse a String</a></li>
+              <li className="footer-link-item"><a href="#missions">Sum Positive Numbers</a></li>
               <li className="footer-link-item"><a href="#missions">Explain Before You Fix</a></li>
-              <li className="footer-link-item"><a href="#missions">Bug Fingerprint Profiler</a></li>
             </ul>
           </div>
 

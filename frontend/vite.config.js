@@ -12,7 +12,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://backend:5000',
+        target: process.env.VITE_API_URL || (process.env.DOCKER_ENV ? 'http://backend:5000' : 'http://localhost:5000'),
         changeOrigin: true,
         secure: false,
       }

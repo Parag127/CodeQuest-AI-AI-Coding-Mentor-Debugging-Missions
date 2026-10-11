@@ -10,6 +10,7 @@ export default function Navbar({
   currentUser,
   onOpenAuthModal,
   onNavigateLogin,
+  onNavigateEditor,
   onLogout
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -47,8 +48,11 @@ export default function Navbar({
 
         {/* Center Nav Links */}
         <div className="nav-center-links">
+          <button className="nav-link" onClick={onNavigateEditor} style={{ color: 'var(--brand-light)', fontWeight: 600 }}>
+            Code Editor
+          </button>
           <button className="nav-link" onClick={() => scrollToSection('missions')}>
-            Debugging Missions
+            Missions
           </button>
           <button className="nav-link" onClick={() => scrollToSection('showcase')}>
             Telemetry
@@ -121,9 +125,9 @@ export default function Navbar({
           {/* Primary Action Button */}
           <button 
             className="btn btn-primary btn-sm"
-            onClick={() => scrollToSection('missions')}
+            onClick={onNavigateEditor}
           >
-            <span>Launch Mission</span>
+            <span>Code Editor</span>
             <ArrowRight size={14} />
           </button>
         </div>

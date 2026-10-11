@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import MarqueeStrip from './components/MarqueeStrip';
-import MissionSandbox from './components/MissionSandbox';
+import MissionsSection from './components/MissionsSection';
 import ShowcaseBrowser from './components/ShowcaseBrowser';
 import InteractiveJourney from './components/InteractiveJourney';
 import BentoGrid from './components/BentoGrid';
@@ -12,6 +12,7 @@ import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import LoginPage from './pages/LoginPage';
+import PracticePage from './pages/PracticePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -33,17 +34,25 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       const hash = window.location.hash;
-      return path.startsWith('/login') || hash.startsWith('#/login') ? 'login' : 'home';
+      if (path.startsWith('/login') || hash.startsWith('#/login')) return 'login';
+      if (path.startsWith('/editor') || path.startsWith('/practice') || hash.startsWith('#/editor') || hash.startsWith('#/practice')) return 'editor';
+      return 'home';
     }
     return 'home';
   });
 
+  const [selectedChallengeId, setSelectedChallengeId] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  const navigateTo = (route) => {
+  const navigateTo = (route, challengeId = null) => {
     setCurrentRoute(route);
+    if (challengeId) {
+      setSelectedChallengeId(challengeId);
+    }
     if (route === 'login') {
       window.history.pushState({ page: 'login' }, '', '/login');
+    } else if (route === 'editor') {
+      window.history.pushState({ page: 'editor', challengeId }, '', '/editor');
     } else {
       window.history.pushState({ page: 'home' }, '', '/');
     }
@@ -52,8 +61,15 @@ export default function App() {
 
   useEffect(() => {
     const handleLocationChange = () => {
-      const isLogin = window.location.pathname.startsWith('/login') || window.location.hash.startsWith('#/login');
-      setCurrentRoute(isLogin ? 'login' : 'home');
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path.startsWith('/login') || hash.startsWith('#/login')) {
+        setCurrentRoute('login');
+      } else if (path.startsWith('/editor') || path.startsWith('/practice') || hash.startsWith('#/editor') || hash.startsWith('#/practice')) {
+        setCurrentRoute('editor');
+      } else {
+        setCurrentRoute('home');
+      }
     };
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
@@ -227,6 +243,21 @@ export default function App() {
     );
   }
 
+  // If on dedicated full-screen Code Editor IDE page route
+  if (currentRoute === 'editor') {
+    return (
+      <PracticePage 
+        currentUser={currentUser}
+        onNavigateHome={() => navigateTo('home')}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        backendStatus={health?.status}
+        latency={latency}
+        initialChallengeId={selectedChallengeId}
+      />
+    );
+  }
+
   return (
     <>
       {/* Ambient Floating Mesh Orbs (Skilotech reference) */}
@@ -237,7 +268,7 @@ export default function App() {
       {/* High-tech Dot Matrix Background */}
       <div className="dot-grid-bg"></div>
 
-      {/* Floating Island Glass Navbar with Login Trigger */}
+      {/* Floating Island Glass Navbar with Login & Editor Triggers */}
       <Navbar 
         backendStatus={health?.status} 
         isChecking={isChecking} 
@@ -247,21 +278,24 @@ export default function App() {
         currentUser={currentUser}
         onOpenAuthModal={() => setIsAuthOpen(true)}
         onNavigateLogin={() => navigateTo('login')}
+        onNavigateEditor={() => navigateTo('editor')}
         onLogout={handleLogout}
       />
 
       <main style={{ flex: 1, position: 'relative', zIndex: 1 }}>
         {/* Hero Section with Typographic Watermark & macOS IDE */}
         <HeroSection 
-          onStartMission={handleScrollToMissions} 
+          onStartMission={() => navigateTo('editor')} 
           onExploreDocker={handleScrollToArchitecture} 
         />
 
         {/* Tech Stack Infinite Marquee */}
         <MarqueeStrip />
 
-        {/* Core CodeDNA Debugging Sandbox */}
-        <MissionSandbox currentUser={currentUser} />
+        {/* Curated Missions Section (Links directly to Dedicated Code Editor) */}
+        <MissionsSection 
+          onLaunchMission={(challengeId) => navigateTo('editor', challengeId)}
+        />
 
         {/* Browser Showcase: Live Telemetry, CRUD, Topology */}
         <ShowcaseBrowser 
@@ -288,13 +322,14 @@ export default function App() {
         <StatsSection />
 
         {/* Call to Action Banner */}
-        <CallToAction onStartMission={handleScrollToMissions} />
+        <CallToAction onStartMission={() => navigateTo('editor')} />
       </main>
 
       {/* Full Multi-Column Footer with Auth Portal Link */}
       <Footer 
         backendStatus={health?.status} 
         onNavigateLogin={() => navigateTo('login')}
+        onNavigateEditor={() => navigateTo('editor')}
       />
 
       {/* Authentication & Login Modal (Skilotech-Inspired) */}
