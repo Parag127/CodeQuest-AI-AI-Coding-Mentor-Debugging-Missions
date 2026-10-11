@@ -18,7 +18,7 @@ export default function MarqueeStrip() {
   return (
     <section className="marquee-section">
       <div className="marquee-title">
-        POWERED BY CONTAINERIZED CLOUD ARCHITECTURE & HACKATHON STACK
+        POWERED BY CONTAINERIZED CLOUD ARCHITECTURE & MODERN STACK
       </div>
 
       <div className="marquee-container">

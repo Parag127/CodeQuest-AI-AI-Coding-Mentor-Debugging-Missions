@@ -8,7 +8,7 @@ export default function CallToAction({ onStartMission }) {
         <div className="cta-box">
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)', background: 'rgba(37, 99, 235, 0.15)', border: '1px solid rgba(37, 99, 235, 0.3)', color: 'var(--brand-light)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1.25rem' }}>
             <Sparkles size={13} />
-            <span>D.Y. Patil Hackathon Prototype</span>
+            <span>Deliberate Debugging Practice</span>
           </div>
 
           <h2 className="cta-title">

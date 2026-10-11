@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Cpu
 } from 'lucide-react';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
 
@@ -47,10 +48,38 @@ export default function LoginPage({
   const [successMessage, setSuccessMessage] = useState('');
   const [forgotPasswordNotice, setForgotPasswordNotice] = useState(false);
 
-  // Scroll to top when page mounts
+  // Scroll to top when page mounts and inspect Google OAuth query params
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('google_auth') === 'success') {
+        const userParam = urlParams.get('user');
+        if (userParam) {
+          try {
+            const user = JSON.parse(decodeURIComponent(userParam));
+            setSuccessMessage(`Welcome back, ${user.name}! Authenticated via Google.`);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => {
+              onLoginSuccess(user);
+              onNavigateHome();
+            }, 800);
+          } catch (e) {
+            console.warn('Failed to parse Google user parameter:', e);
+          }
+        }
+      } else if (urlParams.get('google_error')) {
+        const errCode = urlParams.get('google_error');
+        if (errCode === 'GOOGLE_CLIENT_ID_NOT_CONFIGURED') {
+          setErrorMessage('Google OAuth client ID is not configured on server. Use the 1-click Google Account Chooser or email credentials.');
+        } else {
+          setErrorMessage(`Google authentication error: ${errCode}`);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [onLoginSuccess, onNavigateHome]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,10 +124,10 @@ export default function LoginPage({
       }
     } catch (err) {
       console.warn('Backend server offline fallback:', err);
-      // Hackathon demo fallback for seamless experience
+      // Demo fallback for seamless experience
       const fallbackUser = {
         id: Date.now(),
-        name: name.trim() || (email.includes('@') ? email.split('@')[0] : 'Hackathon Developer'),
+        name: name.trim() || (email.includes('@') ? email.split('@')[0] : 'DebugMate Developer'),
         email: email.trim(),
         role: selectedRole,
         avatar: (name || email).substring(0, 2).toUpperCase(),
@@ -121,12 +150,12 @@ export default function LoginPage({
     setSuccessMessage('');
     setForgotPasswordNotice(false);
     if (role === 'learner') {
-      setEmail('learner@dypatil.edu');
+      setEmail('learner@debugmate.dev');
       setPassword('password123');
       setSelectedRole('learner');
       setAuthMode('login');
     } else {
-      setEmail('mentor@dypatil.edu');
+      setEmail('mentor@debugmate.dev');
       setPassword('password123');
       setSelectedRole('reviewer');
       setAuthMode('login');
@@ -153,7 +182,7 @@ export default function LoginPage({
             title="Return to Main Workspace"
           >
             <ArrowLeft size={16} />
-            <span>Back to CodeQuest</span>
+            <span>Back to DebugMate</span>
           </button>
 
           {/* Center Brand */}
@@ -161,19 +190,11 @@ export default function LoginPage({
             <div className="brand-icon-box" style={{ width: '32px', height: '32px' }}>
               <Layers size={18} />
             </div>
-            <span>CodeQuest <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
+            <span>DebugMate</span>
           </div>
 
-          {/* Status & Theme Toggle */}
+          {/* Theme Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div className="nav-status-pill" style={{ display: 'none', '@media (min-width: 640px)': { display: 'flex' } }}>
-              <span className={`pulse-dot ${backendStatus === 'healthy' ? '' : 'offline'}`}></span>
-              <span>{backendStatus === 'healthy' ? 'API Online' : 'Standby'}</span>
-              {latency && (
-                <span style={{ color: 'var(--cyan-accent)', fontSize: '0.7rem' }}>{latency}ms</span>
-              )}
-            </div>
-
             <button 
               className="theme-toggle-btn"
               onClick={onToggleTheme}
@@ -194,10 +215,10 @@ export default function LoginPage({
               LEFT COLUMN: Product Showcase & Sandbox Terminal
               ============================================================== */}
           <section className="login-showcase-panel">
-            {/* Hackathon Track Badge */}
-            <div className="login-hackathon-badge">
+            {/* Value Badge */}
+            <div className="login-pill-badge">
               <Award size={14} style={{ color: 'var(--brand-light)' }} />
-              <span>D.Y. Patil Hackathon 2026 • AI Coding Mentor Track</span>
+              <span>Deliberate Debugging & Cognitive Practice</span>
             </div>
 
             <h1 className="login-showcase-title">
@@ -221,7 +242,7 @@ export default function LoginPage({
                 </div>
                 <div className="login-terminal-title">
                   <Terminal size={13} style={{ marginRight: '5px' }} />
-                  <span>codequest-sandbox-daemon v2.4</span>
+                  <span>debugmate-sandbox-daemon v2.4</span>
                 </div>
                 <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
                   ACTIVE
@@ -230,7 +251,7 @@ export default function LoginPage({
               <div className="login-terminal-body">
                 <div className="terminal-line">
                   <span className="term-prompt">$</span> 
-                  <span className="term-cmd">codequest auth:verify --session=dy-patil-2026</span>
+                  <span className="term-cmd">debugmate auth:verify --session=secure-prod-2026</span>
                 </div>
                 <div className="terminal-line term-output text-cyan">
                   [OK] Zero-Trust Non-Root Container: READY (UID 1001)
@@ -286,20 +307,20 @@ export default function LoginPage({
               </div>
             </div>
 
-            {/* Hackathon Mentor Testimonial */}
+            {/* Mentor Testimonial */}
             <div className="login-quote-card">
               <p className="login-quote-text">
-                "CodeQuest AI redefines how students practice: instead of copying code from LLMs, learners 
-                diagnose and fix bugs systematically with verifiable container security."
+                "DebugMate redefines how programmers practice: instead of copying code from assistants, learners 
+                diagnose and fix bugs systematically with verifiable cognitive scaffolding."
               </p>
               <div className="login-quote-author">
-                <div className="login-quote-avatar">DY</div>
+                <div className="login-quote-avatar">DM</div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                    Engineering Jury Panel
+                    Senior Engineering Mentor
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                    D.Y. Patil College of Engineering Hackathon
+                    Core Systems Practice Platform
                   </div>
                 </div>
               </div>
@@ -323,7 +344,7 @@ export default function LoginPage({
                 <p className="login-card-subtitle">
                   {authMode === 'login'
                     ? 'Enter your credentials or choose a 1-click demo role below.'
-                    : 'Join CodeQuest AI for the D.Y. Patil Hackathon practice round.'}
+                    : 'Join DebugMate to master root-cause debugging and cognitive code practice.'}
                 </p>
               </div>
 
@@ -363,11 +384,11 @@ export default function LoginPage({
                 </button>
               </div>
 
-              {/* Quick 1-Click Demo Buttons for Hackathon Judges */}
+              {/* Quick 1-Click Demo Buttons */}
               <div className="login-quick-demo-box">
                 <div className="login-quick-demo-label">
                   <Zap size={13} style={{ color: 'var(--brand-light)' }} />
-                  <span>1-Click Hackathon Demo Fill:</span>
+                  <span>1-Click Demo Fill:</span>
                 </div>
                 <div className="login-quick-btn-grid">
                   <button 
@@ -378,7 +399,7 @@ export default function LoginPage({
                   >
                     <span>Demo Learner</span>
                     <span className="badge badge-brand" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
-                      learner@dypatil.edu
+                      learner@debugmate.dev
                     </span>
                   </button>
                   <button 
@@ -389,7 +410,7 @@ export default function LoginPage({
                   >
                     <span>Demo Mentor</span>
                     <span className="badge badge-brand" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
-                      mentor@dypatil.edu
+                      mentor@debugmate.dev
                     </span>
                   </button>
                 </div>
@@ -415,9 +436,31 @@ export default function LoginPage({
               {forgotPasswordNotice && (
                 <div className="auth-alert" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-accent)', color: 'var(--brand-light)' }}>
                   <Sparkles size={16} />
-                  <span>For hackathon demo accounts, use password <strong>password123</strong> or click either 1-click demo button above!</span>
+                  <span>For demo accounts, use password <strong>password123</strong> or click either 1-click demo button above!</span>
                 </div>
               )}
+
+              {/* Google OAuth 2.0 Fast Action Button */}
+              <div className="oauth-section-wrap" style={{ marginBottom: '1.25rem' }}>
+                <GoogleAuthButton 
+                  selectedRole={selectedRole}
+                  text={authMode === 'login' ? 'Continue with Google' : 'Sign up with Google'}
+                  onSuccess={(user) => {
+                    setSuccessMessage(`Welcome back, ${user.name}! Authenticated via Google.`);
+                    setTimeout(() => {
+                      onLoginSuccess(user);
+                      onNavigateHome();
+                    }, 800);
+                  }}
+                  onError={(err) => setErrorMessage(err)}
+                />
+
+                <div className="oauth-divider">
+                  <span className="oauth-divider-line"></span>
+                  <span className="oauth-divider-text">OR CONTINUE WITH EMAIL</span>
+                  <span className="oauth-divider-line"></span>
+                </div>
+              </div>
 
               {/* Authentication Form */}
               <form onSubmit={handleSubmit} className="auth-form">
@@ -431,7 +474,7 @@ export default function LoginPage({
                       <input
                         type="text"
                         className="auth-input"
-                        placeholder="e.g. Parag Patil"
+                        placeholder="e.g. Alex Chen"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
@@ -448,7 +491,7 @@ export default function LoginPage({
                     <input
                       type="email"
                       className="auth-input"
-                      placeholder="learner@dypatil.edu"
+                      placeholder="learner@debugmate.dev"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -519,7 +562,7 @@ export default function LoginPage({
                     {isLoading 
                       ? 'Authenticating...' 
                       : authMode === 'login' 
-                        ? 'Sign In to CodeQuest' 
+                        ? 'Sign In to DebugMate' 
                         : 'Create Free Account & Start'}
                   </span>
                   <ArrowRight size={16} />

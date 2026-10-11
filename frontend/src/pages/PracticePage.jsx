@@ -855,15 +855,6 @@ export default function PracticePage({
             </span>
           </button>
 
-          <div className="practice-divider-v"></div>
-
-          {/* Health Pill */}
-          <div className="nav-status-pill" style={{ padding: '0.25rem 0.6rem' }} title={`Backend status: ${backendStatus}`}>
-            <span className={`pulse-dot ${backendStatus === 'healthy' ? '' : 'offline'}`}></span>
-            <span style={{ fontSize: '0.72rem' }}>{backendStatus === 'healthy' ? 'Online' : 'Standby'}</span>
-            {latency && <span style={{ fontSize: '0.68rem', color: 'var(--cyan-accent)' }}>{latency}ms</span>}
-          </div>
-
           {/* Theme Toggle */}
           <button 
             className="theme-toggle-btn" 

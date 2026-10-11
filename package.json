@@ -1,7 +1,7 @@
 {
-  "name": "dy-patil-hackathon-docker-starter",
+  "name": "debugmate",
   "version": "1.0.0",
-  "description": "Full-Stack Dockerized Application (Express API + Vite React + Docker Compose)",
+  "description": "DebugMate — Interactive Code Debugging & Practice Platform",
   "private": true,
   "scripts": {
     "docker:build": "docker compose build",

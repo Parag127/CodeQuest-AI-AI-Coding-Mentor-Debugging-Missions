@@ -13,6 +13,7 @@ import aiRouter from './routes/ai.js';
 import ebyfRouter from './routes/explainBeforeFix.js';
 import progressRouter from './routes/progress.js';
 import recommendationsRouter from './routes/recommendations.js';
+import authRouter from './routes/auth.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -23,12 +24,17 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy headers for Vercel, Render, and reverse proxies (enables correct https detection)
+app.set('trust proxy', 1);
+
 // Initialize Database schema and seed data on startup
 try {
   initDb();
 } catch (err) {
-  console.error('[DB] Fatal error initializing database:', err);
-  process.exit(1);
+  console.error('[DB] Database initialization warning:', err.message);
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 }
 
 // Allowed CORS origins
@@ -38,8 +44,14 @@ const allowedOrigins = process.env.CLIENT_ORIGIN
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests or matching origins
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    // Allow non-browser requests, allowed origins, wildcards, or Vercel preview/production domains
+    if (
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      allowedOrigins.includes('*') ||
+      origin.endsWith('.vercel.app') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Blocked by CORS policy'));
@@ -51,30 +63,6 @@ app.use(cors({
 
 // Body parser with 100kb limit as required by API contract and security rules
 app.use(express.json({ limit: '100kb' }));
-
-// In-memory demo users store for authentication
-let demoUsers = [
-  {
-    id: 1,
-    name: 'Hackathon Learner',
-    email: 'learner@dypatil.edu',
-    password: 'password123',
-    role: 'learner',
-    avatar: 'HL',
-    level: 'Level 4 • Bug Hunter',
-    xp: 1420
-  },
-  {
-    id: 2,
-    name: 'Lead Reviewer',
-    email: 'mentor@dypatil.edu',
-    password: 'password123',
-    role: 'reviewer',
-    avatar: 'LR',
-    level: 'Mentor & Evaluator',
-    xp: 5000
-  }
-];
 
 // In-memory sprint items store
 let hackathonItems = [
@@ -109,6 +97,11 @@ const apiCatalog = {
     { path: '/api/items/:id', method: 'DELETE', description: 'Delete sprint item' },
     { path: '/api/auth/login', method: 'POST', description: 'Authenticate user session' },
     { path: '/api/auth/register', method: 'POST', description: 'Register new user account' },
+    { path: '/api/auth/google', method: 'POST', description: 'Authenticate or register via Google OAuth' },
+    { path: '/api/auth/google', method: 'GET', description: 'Initiate Google OAuth 2.0 authorization redirect' },
+    { path: '/api/auth/google/callback', method: 'GET', description: 'Google OAuth 2.0 redirect callback' },
+    { path: '/api/auth/config', method: 'GET', description: 'OAuth client configuration status' },
+    { path: '/api/auth/me', method: 'GET', description: 'Current authenticated session profile' },
     { path: '/api/ai/health', method: 'GET', description: 'Gemini AI service health check' },
     { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
     { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
@@ -131,72 +124,8 @@ app.get('/api', (req, res) => {
   res.json(apiCatalog);
 });
 
-// Authentication endpoints
-app.post('/api/auth/login', (req, res) => {
-  const { email, password, role } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Email and password are required' });
-  }
-
-  let user = demoUsers.find(u => u.email.toLowerCase() === String(email).trim().toLowerCase());
-  if (!user) {
-    user = {
-      id: Date.now(),
-      name: String(email).split('@')[0],
-      email: String(email).trim(),
-      role: role || 'learner',
-      avatar: String(email).substring(0, 2).toUpperCase(),
-      level: 'Level 1 • Junior Debugger',
-      xp: 100
-    };
-    demoUsers.push(user);
-  }
-
-  const token = Buffer.from(`${user.id}:${user.email}:${Date.now()}`).toString('base64');
-  res.json({
-    success: true,
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role || role || 'learner',
-      avatar: user.avatar,
-      level: user.level,
-      xp: user.xp
-    }
-  });
-});
-
-app.post('/api/auth/register', (req, res) => {
-  const { name, email, password, role } = req.body;
-  if (!email || !name) {
-    return res.status(400).json({ success: false, error: 'Name and email are required' });
-  }
-
-  const existing = demoUsers.find(u => u.email.toLowerCase() === String(email).trim().toLowerCase());
-  if (existing) {
-    return res.status(400).json({ success: false, error: 'An account with this email already exists' });
-  }
-
-  const newUser = {
-    id: Date.now(),
-    name: String(name).trim(),
-    email: String(email).trim(),
-    role: role || 'learner',
-    avatar: String(name).trim().substring(0, 2).toUpperCase(),
-    level: 'Level 1 • Junior Debugger',
-    xp: 0
-  };
-  demoUsers.push(newUser);
-
-  const token = Buffer.from(`${newUser.id}:${newUser.email}:${Date.now()}`).toString('base64');
-  res.status(201).json({
-    success: true,
-    token,
-    user: newUser
-  });
-});
+// Authentication routes (Local & Google OAuth 2.0)
+app.use('/api/auth', authRouter);
 
 // Health check endpoint (Used by Docker Compose healthcheck and frontend telemetry)
 app.get('/api/health', (req, res) => {

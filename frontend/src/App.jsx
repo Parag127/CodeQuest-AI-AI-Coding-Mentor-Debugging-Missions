@@ -3,10 +3,8 @@ import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import MarqueeStrip from './components/MarqueeStrip';
 import MissionsSection from './components/MissionsSection';
-import ShowcaseBrowser from './components/ShowcaseBrowser';
 import InteractiveJourney from './components/InteractiveJourney';
 import BentoGrid from './components/BentoGrid';
-import DockerGuideCard from './components/DockerGuideCard';
 import StatsSection from './components/StatsSection';
 import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
@@ -18,12 +16,12 @@ const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' 
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('codequest_theme') || 'dark';
+    return localStorage.getItem('debugmate_theme') || 'dark';
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('codequest_user');
+      const stored = localStorage.getItem('debugmate_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -60,6 +58,24 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Check if redirected from Google OAuth flow
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('google_auth') === 'success') {
+        const userParam = urlParams.get('user');
+        if (userParam) {
+          try {
+            const parsedUser = JSON.parse(decodeURIComponent(userParam));
+            setCurrentUser(parsedUser);
+            localStorage.setItem('debugmate_user', JSON.stringify(parsedUser));
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (e) {
+            console.warn('Failed to parse Google user parameter:', e);
+          }
+        }
+      }
+    }
+
     const handleLocationChange = () => {
       const path = window.location.pathname;
       const hash = window.location.hash;
@@ -81,19 +97,13 @@ export default function App() {
 
   const [health, setHealth] = useState(null);
   const [info, setInfo] = useState(null);
-  const [items, setItems] = useState([
-    { id: 1, title: 'Dockerize Backend Service (Node.js 20)', category: 'DevOps', status: 'Completed' },
-    { id: 2, title: 'Dockerize Frontend Client (Vite Nginx)', category: 'DevOps', status: 'Completed' },
-    { id: 3, title: 'Configure Bridge Orchestration Network', category: 'Infrastructure', status: 'Completed' },
-    { id: 4, title: 'Deploy CodeDNA AI Debugging Sandbox', category: 'Product', status: 'In Progress' }
-  ]);
   const [isChecking, setIsChecking] = useState(true);
   const [latency, setLatency] = useState(null);
 
   // Sync theme with document root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('codequest_theme', theme);
+    localStorage.setItem('debugmate_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -102,12 +112,12 @@ export default function App() {
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    localStorage.setItem('codequest_user', JSON.stringify(user));
+    localStorage.setItem('debugmate_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('codequest_user');
+    localStorage.removeItem('debugmate_user');
   };
 
   // Health and System Info Fetcher
@@ -140,7 +150,7 @@ export default function App() {
         memoryUsageMB: { rss: 42, heapTotal: 34, heapUsed: 19 }
       });
       setInfo({
-        hostname: 'codequest-local-dev',
+        hostname: 'debugmate-local-dev',
         platform: 'node',
         arch: 'x64',
         nodeVersion: 'v20.x',
@@ -154,70 +164,15 @@ export default function App() {
     }
   }, []);
 
-  // CRUD Items Fetcher
-  const fetchItems = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/items`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          setItems(data.data);
-        }
-      }
-    } catch (err) {
-      console.warn('Using local items fallback while backend connects:', err);
-    }
-  }, []);
-
   useEffect(() => {
     fetchHealthAndInfo();
-    fetchItems();
 
     const interval = setInterval(() => {
       fetchHealthAndInfo();
-    }, 12000);
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [fetchHealthAndInfo, fetchItems]);
-
-  // Add Item to Backend CRUD
-  const handleAddItem = async (title, category) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, category, status: 'Active' })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setItems(prev => [data.data, ...prev]);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Added item in optimistic mode:', err);
-    }
-    // Optimistic fallback
-    const localItem = {
-      id: Date.now(),
-      title,
-      category: category || 'General',
-      status: 'Active',
-      timestamp: new Date().toISOString()
-    };
-    setItems(prev => [localItem, ...prev]);
-  };
-
-  // Delete Item from Backend CRUD
-  const handleDeleteItem = async (id) => {
-    try {
-      await fetch(`${API_BASE}/api/items/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.warn('Deleted item in optimistic mode:', err);
-    }
-    setItems(prev => prev.filter(item => item.id !== id));
-  };
+  }, [fetchHealthAndInfo]);
 
   const handleScrollToMissions = () => {
     const el = document.getElementById('missions');
@@ -297,26 +252,11 @@ export default function App() {
           onLaunchMission={(challengeId) => navigateTo('editor', challengeId)}
         />
 
-        {/* Browser Showcase: Live Telemetry, CRUD, Topology */}
-        <ShowcaseBrowser 
-          health={health} 
-          info={info} 
-          isChecking={isChecking} 
-          onRefreshTelemetry={fetchHealthAndInfo}
-          items={items}
-          onAddItem={handleAddItem}
-          onDeleteItem={handleDeleteItem}
-          latency={latency}
-        />
-
         {/* 4-Stage Pedagogical Workflow Journey */}
         <InteractiveJourney />
 
         {/* Architecture & Security Bento Grid */}
         <BentoGrid />
-
-        {/* Docker Quickstart & Command Center */}
-        <DockerGuideCard />
 
         {/* Impact Numbers & Performance Stats */}
         <StatsSection />

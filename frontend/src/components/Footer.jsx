@@ -12,12 +12,11 @@ export default function Footer({ backendStatus, onNavigateLogin, onNavigateEdito
               <div className="brand-icon-box" style={{ width: '32px', height: '32px' }}>
                 <Layers size={18} />
               </div>
-              <span>CodeQuest <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
+              <span>DebugMate</span>
             </div>
 
             <p className="footer-tagline">
-              An AI-assisted debugging practice environment and containerized microservice suite 
-              engineered for D.Y. Patil Hackathon 2026.
+              A deliberate debugging practice environment engineered for mastering algorithms and programming fundamentals.
             </p>
 
             <div style={{ display: 'flex', gap: '0.65rem' }}>
@@ -53,20 +52,20 @@ export default function Footer({ backendStatus, onNavigateLogin, onNavigateEdito
           <div>
             <h4 className="footer-col-title">Architecture</h4>
             <ul className="footer-links-list">
-              <li className="footer-link-item"><a href="#showcase">Express REST API Health</a></li>
-              <li className="footer-link-item"><a href="#showcase">Vite + React 18 SPA</a></li>
-              <li className="footer-link-item"><a href="#showcase">Docker Compose Bridge</a></li>
+              <li className="footer-link-item"><a href="#architecture">Express REST API Health</a></li>
+              <li className="footer-link-item"><a href="#architecture">Vite + React 18 SPA</a></li>
+              <li className="footer-link-item"><a href="#architecture">Isolated Sandbox Runner</a></li>
               <li className="footer-link-item"><a href="#architecture">Non-Root Sandbox Security</a></li>
               <li className="footer-link-item"><a href="#architecture">Hidden Test Guard</a></li>
             </ul>
           </div>
 
-          {/* Hackathon Docs */}
+          {/* Resources */}
           <div>
-            <h4 className="footer-col-title">Hackathon Docs</h4>
+            <h4 className="footer-col-title">Resources</h4>
             <ul className="footer-links-list">
-              <li className="footer-link-item"><a href="#hero">D.Y. Patil Hackathon 2026</a></li>
-              <li className="footer-link-item"><a href="#showcase">API Contract (/api/items)</a></li>
+              <li className="footer-link-item"><a href="#hero">Deliberate Practice Guide</a></li>
+              <li className="footer-link-item"><a href="#architecture">API Specifications</a></li>
               <li className="footer-link-item">
                 <button 
                   onClick={onNavigateLogin} 
@@ -76,7 +75,7 @@ export default function Footer({ backendStatus, onNavigateLogin, onNavigateEdito
                 </button>
               </li>
               <li className="footer-link-item"><a href="#journey">4-Stage Learning Journey</a></li>
-              <li className="footer-link-item"><a href="#architecture">Security & Quota Protocol</a></li>
+              <li className="footer-link-item"><a href="#architecture">Security & Sandbox Protocol</a></li>
             </ul>
           </div>
         </div>
@@ -84,7 +83,7 @@ export default function Footer({ backendStatus, onNavigateLogin, onNavigateEdito
         {/* Footer Bottom Bar */}
         <div className="footer-bottom-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>&copy; {new Date().getFullYear()} CodeQuest AI &bull; D.Y. Patil Hackathon Starter.</span>
+            <span>&copy; {new Date().getFullYear()} DebugMate.</span>
             <span style={{ color: 'var(--text-muted)' }}>All rights reserved.</span>
           </div>
 

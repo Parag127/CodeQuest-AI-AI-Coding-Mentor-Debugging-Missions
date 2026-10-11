@@ -81,6 +81,42 @@ export function initDb() {
     console.warn('[DB] Table check for ebyf_reflections skipped:', err.message);
   }
 
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT,
+        role TEXT NOT NULL DEFAULT 'learner' CHECK(role IN ('learner', 'reviewer')),
+        avatar TEXT,
+        level TEXT DEFAULT 'Level 1 • Junior Debugger',
+        xp INTEGER DEFAULT 100,
+        auth_provider TEXT DEFAULT 'local',
+        google_id TEXT,
+        picture TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+    `);
+
+    // Seed default demo users if users table is empty
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+    if (userCount === 0) {
+      const insertUser = db.prepare(`
+        INSERT INTO users (id, name, email, password_hash, role, avatar, level, xp, auth_provider)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertUser.run('1', 'DebugMate Learner', 'learner@debugmate.dev', 'password123', 'learner', 'DL', 'Level 4 • Bug Hunter', 1420, 'local');
+      insertUser.run('2', 'Lead Reviewer', 'mentor@debugmate.dev', 'password123', 'reviewer', 'LR', 'Mentor & Evaluator', 5000, 'local');
+      insertUser.run('3', 'DebugMate Learner', 'learner@dypatil.edu', 'password123', 'learner', 'DL', 'Level 4 • Bug Hunter', 1420, 'local');
+      insertUser.run('4', 'Lead Reviewer', 'mentor@dypatil.edu', 'password123', 'reviewer', 'LR', 'Mentor & Evaluator', 5000, 'local');
+    }
+  } catch (err) {
+    console.warn('[DB] Table check for users skipped:', err.message);
+  }
+
   // Run seed data
   if (fs.existsSync(seedPath)) {
     const seedSql = fs.readFileSync(seedPath, 'utf-8');

@@ -119,6 +119,103 @@ Registers a new learner or reviewer account.
 
 ---
 
+### `POST /api/auth/google`
+Authenticates a user via Google OAuth 2.0 / Google Identity Services (GIS). Supports ID token credentials, authorization code exchange, or simulated Google test profiles in development.
+
+**Request Body (Option A - Google Identity Services Credential Token)**:
+```json
+{
+  "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...",
+  "role": "learner"
+}
+```
+
+**Request Body (Option B - Simulated Google Profile for Sandbox/Testing)**:
+```json
+{
+  "demoGoogleUser": {
+    "email": "alex@debugmate.dev",
+    "name": "Alex Developer",
+    "picture": "https://lh3.googleusercontent.com/..."
+  },
+  "role": "learner"
+}
+```
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "token": "MTc5MTcwMjIzOTAwMDphbGV4QGRlYnVnbWF0ZS5kZXY6MTc5MTcwMjIzOTAwMA==",
+  "user": {
+    "id": 1791702239000,
+    "name": "Alex Developer",
+    "email": "alex@debugmate.dev",
+    "role": "learner",
+    "avatar": "AD",
+    "level": "Level 2 • Code Explorer",
+    "xp": 250,
+    "authProvider": "google",
+    "picture": null
+  }
+}
+```
+
+---
+
+### `GET /api/auth/google`
+Initiates server-side Google OAuth 2.0 redirect to `https://accounts.google.com/o/oauth2/v2/auth`.
+
+**Query Parameters**:
+- `role`: `learner` or `reviewer` (optional, default `learner`).
+
+**Response**:
+- `302 Redirect` to Google consent screen (if `GOOGLE_CLIENT_ID` configured).
+- `302 Redirect` to `${CLIENT_ORIGIN}/login?google_error=GOOGLE_CLIENT_ID_NOT_CONFIGURED` (if unconfigured).
+
+---
+
+### `GET /api/auth/google/callback`
+Handles OAuth 2.0 authorization code callback from Google, exchanges authorization code for user profile, generates session token, and redirects back to frontend client.
+
+---
+
+### `GET /api/auth/config`
+Provides public OAuth configuration status so the frontend can initialize Google Identity Services SDK.
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "googleConfigured": true,
+  "googleClientId": "your-client-id.apps.googleusercontent.com"
+}
+```
+
+---
+
+### `GET /api/auth/me`
+Retrieves currently authenticated user from `Authorization: Bearer <token>` header.
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "user": {
+    "id": 1,
+    "name": "DebugMate Learner",
+    "email": "learner@debugmate.dev",
+    "role": "learner",
+    "avatar": "DL",
+    "level": "Level 4 • Bug Hunter",
+    "xp": 1420,
+    "authProvider": "local"
+  }
+}
+```
+
+---
+
 ## 3. Sprint Items & Microservice CRUD
 
 ### `GET /api/items`

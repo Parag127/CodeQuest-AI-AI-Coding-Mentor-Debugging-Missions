@@ -116,6 +116,22 @@ CREATE TABLE IF NOT EXISTS ebyf_reflections (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Users Table (Supports local accounts and Google OAuth federated identities)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT,
+  role TEXT NOT NULL DEFAULT 'learner' CHECK(role IN ('learner', 'reviewer')),
+  avatar TEXT,
+  level TEXT DEFAULT 'Level 1 • Junior Debugger',
+  xp INTEGER DEFAULT 100,
+  auth_provider TEXT DEFAULT 'local', -- 'local' or 'google'
+  google_id TEXT,
+  picture TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes for performant queries
 CREATE INDEX IF NOT EXISTS idx_test_cases_challenge_id ON test_cases(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_learner_challenge ON submissions(learner_id, challenge_id);
@@ -124,4 +140,6 @@ CREATE INDEX IF NOT EXISTS idx_hint_history_learner ON hint_history(learner_id);
 CREATE INDEX IF NOT EXISTS idx_bug_fingerprints_learner ON bug_fingerprints(learner_id);
 CREATE INDEX IF NOT EXISTS idx_learner_progress_learner ON learner_progress(learner_id);
 CREATE INDEX IF NOT EXISTS idx_ebyf_reflections_learner ON ebyf_reflections(learner_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 

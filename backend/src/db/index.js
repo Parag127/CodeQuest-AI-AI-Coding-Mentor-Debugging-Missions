@@ -6,24 +6,41 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Database path defaults to backend/data/codedna.db unless DB_PATH env var is set
-const defaultDbPath = path.resolve(__dirname, '../../data/codedna.db');
+// Database path defaults to /tmp on Vercel or backend/data/codedna.db locally
+const defaultDbPath = process.env.VERCEL
+  ? path.join('/tmp', 'codedna.db')
+  : path.resolve(__dirname, '../../data/codedna.db');
 const dbPath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbPath;
 
-// Ensure database directory exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+let db;
+try {
+  // Ensure database directory exists
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  // Initialize SQLite database instance
+  db = new Database(dbPath, {
+    verbose: process.env.NODE_ENV === 'development' && process.env.DEBUG_SQL === 'true' ? console.log : null
+  });
+
+  // Enable WAL mode and enforce foreign keys
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+} catch (err) {
+  console.warn('[DB] SQLite initialization warning:', err.message);
+  // Safe fallback mock for environments without writable local filesystem
+  db = {
+    prepare: () => ({
+      all: () => [],
+      get: () => null,
+      run: () => ({ changes: 0, lastInsertRowid: 0 })
+    }),
+    exec: () => {},
+    pragma: () => {}
+  };
 }
-
-// Initialize SQLite database instance
-const db = new Database(dbPath, {
-  verbose: process.env.NODE_ENV === 'development' && process.env.DEBUG_SQL === 'true' ? console.log : null
-});
-
-// Enable WAL mode and enforce foreign keys
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
 
 export default db;
 export { db, dbPath };

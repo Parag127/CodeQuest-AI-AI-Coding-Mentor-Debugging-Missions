@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Moon, Sun, ArrowRight, LogIn, LogOut, User, Zap } from 'lucide-react';
+import { GoogleIcon } from './GoogleAuthButton';
 
 export default function Navbar({ 
   backendStatus, 
@@ -39,10 +40,7 @@ export default function Navbar({
             <Layers size={20} />
           </div>
           <div>
-            <span>CodeQuest</span>
-            <span style={{ color: 'var(--brand-light)', marginLeft: '3px', fontSize: '0.82rem', fontWeight: 600 }}>
-              AI
-            </span>
+            <span>DebugMate</span>
           </div>
         </a>
 
@@ -54,32 +52,16 @@ export default function Navbar({
           <button className="nav-link" onClick={() => scrollToSection('missions')}>
             Missions
           </button>
-          <button className="nav-link" onClick={() => scrollToSection('showcase')}>
-            Telemetry
-          </button>
           <button className="nav-link" onClick={() => scrollToSection('journey')}>
             How It Works
           </button>
           <button className="nav-link" onClick={() => scrollToSection('architecture')}>
-            Docker Cloud
+            Architecture
           </button>
         </div>
 
         {/* Right Action Group */}
         <div className="nav-right-actions">
-          {/* Real-time Status Badge */}
-          <div className="nav-status-pill" title={isChecking ? 'Checking API...' : `API status: ${backendStatus}`}>
-            <span className={`pulse-dot ${backendStatus === 'healthy' ? '' : 'offline'}`}></span>
-            <span>
-              {isChecking ? 'Checking...' : backendStatus === 'healthy' ? 'API Online' : 'Offline'}
-            </span>
-            {latency !== null && (
-              <span style={{ fontSize: '0.7rem', color: 'var(--cyan-accent)', marginLeft: '2px' }}>
-                {latency}ms
-              </span>
-            )}
-          </div>
-
           {/* Theme Toggle Button */}
           <button 
             className="theme-toggle-btn" 
@@ -93,11 +75,16 @@ export default function Navbar({
           {/* Authentication Action Group */}
           {currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div className="user-profile-pill" title={`Logged in as ${currentUser.email}`}>
+              <div className="user-profile-pill" title={`Logged in as ${currentUser.email}${currentUser.authProvider === 'google' ? ' (Google OAuth)' : ''}`}>
                 <span className="user-profile-avatar">{currentUser.avatar || 'U'}</span>
                 <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentUser.name}
                 </span>
+                {currentUser.authProvider === 'google' && (
+                  <span className="google-pill-badge" title="Verified Google Account">
+                    <GoogleIcon size={12} />
+                  </span>
+                )}
                 <span className="badge badge-brand" style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }}>
                   {currentUser.role === 'reviewer' ? 'Mentor' : 'Lvl 4'}
                 </span>
@@ -115,7 +102,7 @@ export default function Navbar({
             <button 
               className="btn btn-secondary btn-sm"
               onClick={onNavigateLogin || onOpenAuthModal}
-              title="Sign In to CodeQuest AI"
+              title="Sign In to DebugMate"
             >
               <LogIn size={14} />
               <span>Sign In</span>

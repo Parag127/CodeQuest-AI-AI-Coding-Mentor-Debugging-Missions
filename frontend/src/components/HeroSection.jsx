@@ -43,9 +43,9 @@ public static int[] findTargetPair(int[] arr, int target) {
 
   return (
     <section id="hero" className="hero-section">
-      {/* Background Typographic Watermark (Skilotech signature) */}
+      {/* Background Typographic Watermark */}
       <div className="hero-watermark">
-        CODEQUEST
+        DEBUGMATE
       </div>
 
       <div className="container">
@@ -61,7 +61,7 @@ public static int[] findTargetPair(int[] arr, int target) {
           <div className="hero-text-side">
             <div className="hero-pill-badge">
               <Sparkles size={14} className="hero-pill-sparkle" />
-              <span>D.Y. Patil Hackathon 2026 • AI Mentor & Sandbox</span>
+              <span>Deliberate Debugging & Code Practice</span>
             </div>
 
             <h1 className="hero-title">
@@ -72,7 +72,7 @@ public static int[] findTargetPair(int[] arr, int target) {
             <p className="hero-subtitle">
               Engineered for learners to develop real-world problem-solving intuition. 
               Submit Java & JavaScript challenges with progressive hints that never spoil answers, 
-              mandatory cognitive explanations, and isolated Docker container telemetry.
+              mandatory cognitive explanations, and isolated test execution.
             </p>
 
             <div className="hero-actions">
@@ -82,21 +82,21 @@ public static int[] findTargetPair(int[] arr, int target) {
               </button>
 
               <button className="btn btn-secondary btn-lg" onClick={onExploreDocker}>
-                <span>Docker Architecture</span>
+                <span>System Architecture</span>
                 <ArrowRight size={18} />
               </button>
             </div>
 
-            {/* Social Trust Proof (Skilotech reference) */}
+            {/* Social Trust Proof */}
             <div className="hero-trust-bar">
               <div className="trust-avatars">
-                <div className="trust-avatar">DY</div>
+                <div className="trust-avatar">DM</div>
                 <div className="trust-avatar">JS</div>
                 <div className="trust-avatar">JV</div>
-                <div className="trust-avatar">AI</div>
+                <div className="trust-avatar">CS</div>
               </div>
               <p className="trust-text">
-                Proven practice pipeline for <span className="trust-highlight">1,250+ Engineers</span> & student hackathon teams.
+                Proven deliberate practice pipeline for <span className="trust-highlight">1,250+ Engineers</span> & student developers.
               </p>
             </div>
           </div>

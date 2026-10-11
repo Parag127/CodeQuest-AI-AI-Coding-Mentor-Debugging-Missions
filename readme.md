@@ -1,6 +1,6 @@
-# 🚀 CodeQuest AI & CodeDNA — AI Debugging Missions & Containerized Telemetry
+# 🚀 DebugMate — Interactive Code Debugging & Practice Platform
 
-A production-grade, containerized full-stack application built for the **D.Y. Patil Hackathon 2026**. Features an Express.js REST API backend, a Vite + React frontend styled after **Skilotech's modern engineering platform** (floating island navbar, ambient mesh glows, interactive macOS IDE, and live browser console), and a complete **CodeDNA** debugging lab with Java/JS parity, progressive hints, and cognitive explanation gates.
+A production-grade, containerized full-stack application. Features an Express.js REST API backend, a Vite + React frontend styled with modern responsive UI (floating island navbar, ambient mesh glows, interactive IDE), and a deliberate debugging lab with Java/JS parity, progressive hints, and cognitive explanation gates.
 
 ---
 
@@ -127,6 +127,31 @@ npm run dev
 ```text
 .
 ├── .dockerignore              # Global Docker ignore rules
+---
+
+## 🔐 Google OAuth 2.0 & Authentication System
+
+CodeQuest AI supports dual authentication methods:
+1. **Google OAuth 2.0 / Google Identity Services (GIS)**:
+   - Modern, official 1-click **Continue with Google** button.
+   - Supports Google Identity Services (GIS) ID Token verification via Google's `tokeninfo` API endpoint.
+   - Supports full server-side OAuth 2.0 authorization code flow via `GET /api/auth/google` and `GET /api/auth/google/callback`.
+   - **Evaluator & Sandbox Mode**: When testing locally without Google Cloud Console credentials, the app provides a built-in, interactive **Google Account Chooser** modal with realistic sample profiles (Learner, Mentor, or custom Google email) so hackathon judges can test the full Google authentication lifecycle immediately without any configuration blocker!
+2. **Standard Email & Demo Credentials**:
+   - 1-click demo logins (`learner@dypatil.edu` and `mentor@dypatil.edu`).
+   - Account registration with role assignment (Learner vs Lead Reviewer).
+
+### Configuring Real Google OAuth Credentials:
+In your `.env` file (server-side only, never expose client secrets):
+```env
+GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+VITE_GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
+```
+
+---
+
 ├── .gitignore                # Git ignore rules
 ├── .env.example              # Environment variables template
 ├── docker-compose.yml        # Production Docker Compose orchestration

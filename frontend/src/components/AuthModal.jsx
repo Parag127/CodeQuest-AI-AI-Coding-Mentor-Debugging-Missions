@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, Shield, Sparkles, CheckCircle2, AlertCircle, Layers, X, LogIn } from 'lucide-react';
+import GoogleAuthButton from './GoogleAuthButton';
 
 const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
 
@@ -72,10 +73,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       }
     } catch (err) {
       console.warn('Backend offline, using fallback authentication:', err);
-      // Graceful offline fallback for hackathon showcase
+      // Graceful offline fallback
       const fallbackUser = {
         id: Date.now(),
-        name: name.trim() || email.split('@')[0] || 'Hackathon Learner',
+        name: name.trim() || email.split('@')[0] || 'DebugMate Learner',
         email: email.trim(),
         role: selectedRole,
         avatar: (name || email).substring(0, 2).toUpperCase(),
@@ -95,12 +96,12 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   // Quick 1-click Demo Logins
   const handleQuickLogin = (role) => {
     if (role === 'learner') {
-      setEmail('learner@dypatil.edu');
+      setEmail('learner@debugmate.dev');
       setPassword('password123');
       setSelectedRole('learner');
       setAuthMode('login');
     } else {
-      setEmail('mentor@dypatil.edu');
+      setEmail('mentor@debugmate.dev');
       setPassword('password123');
       setSelectedRole('reviewer');
       setAuthMode('login');
@@ -125,12 +126,12 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <Layers size={22} />
           </div>
           <h2 className="auth-title">
-            {authMode === 'login' ? 'Sign In to CodeQuest' : 'Create Free Account'}
+            {authMode === 'login' ? 'Sign In to DebugMate' : 'Create Free Account'}
           </h2>
           <p className="auth-subtitle">
             {authMode === 'login' 
-              ? 'Access your sandboxed missions, cognitive hints, and bug fingerprint.'
-              : 'Join the D.Y. Patil Hackathon practice ecosystem today.'}
+              ? 'Access your missions, cognitive hints, and bug fingerprint.'
+              : 'Join the DebugMate deliberate practice ecosystem today.'}
           </p>
         </div>
 
@@ -192,6 +193,28 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           </div>
         )}
 
+        {/* Google OAuth Fast Action */}
+        <div style={{ marginBottom: '1rem' }}>
+          <GoogleAuthButton 
+            selectedRole={selectedRole}
+            text={authMode === 'login' ? 'Continue with Google' : 'Sign up with Google'}
+            onSuccess={(user) => {
+              setSuccessMessage(`Welcome back, ${user.name}!`);
+              setTimeout(() => {
+                onLoginSuccess(user);
+                onClose();
+              }, 600);
+            }}
+            onError={(err) => setErrorMessage(err)}
+          />
+
+          <div className="oauth-divider" style={{ marginTop: '0.85rem', marginBottom: '0.5rem' }}>
+            <span className="oauth-divider-line"></span>
+            <span className="oauth-divider-text">OR WITH CREDENTIALS</span>
+            <span className="oauth-divider-line"></span>
+          </div>
+        </div>
+
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="auth-form">
           {authMode === 'register' && (
@@ -202,7 +225,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                 <input
                   type="text"
                   className="auth-input"
-                  placeholder="e.g. Parag Patil"
+                  placeholder="e.g. Alex Rivera"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -218,7 +241,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <input
                 type="email"
                 className="auth-input"
-                placeholder="learner@dypatil.edu"
+                placeholder="learner@debugmate.dev"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -275,7 +298,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
             disabled={isLoading}
           >
-            <span>{isLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In to CodeQuest' : 'Create Account'}</span>
+            <span>{isLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In to DebugMate' : 'Create Account'}</span>
             <ArrowRight size={16} />
           </button>
         </form>

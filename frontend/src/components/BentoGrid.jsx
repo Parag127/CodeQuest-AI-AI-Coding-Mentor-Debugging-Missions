@@ -15,7 +15,7 @@ export default function BentoGrid() {
             <span className="hero-gradient-text">Container Isolation</span>
           </h2>
           <p className="section-subtitle">
-            Built from the ground up for strict hackathon security compliance, dual-language execution parity, 
+            Built from the ground up for strict sandboxed security compliance, dual-language execution parity, 
             and zero shell leakage.
           </p>
         </div>
