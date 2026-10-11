@@ -7,6 +7,7 @@ import aiRouter from './routes/ai.js';
 import hintsRouter from './routes/hints.js';
 import ebyfRouter from './routes/explainBeforeFix.js';
 import progressRouter from './routes/progress.js';
+import recommendationsRouter from './routes/recommendations.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/hints', hintsRouter);
 app.use('/api/explain-before-fix', ebyfRouter);
 app.use('/api/progress', progressRouter);
+app.use('/api/recommendations', recommendationsRouter);
 
 // In-memory demo data store for hackathon starter
 let hackathonItems = [
@@ -53,7 +55,8 @@ app.get('/', (req, res) => {
       { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
       { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
       { path: '/api/explain-before-fix', method: 'POST', description: 'Learner reflection before fixing bug' },
-      { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' }
+      { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' },
+      { path: '/api/recommendations/:learnerId', method: 'GET', description: 'Adaptive challenge recommendation' }
     ]
   });
 });

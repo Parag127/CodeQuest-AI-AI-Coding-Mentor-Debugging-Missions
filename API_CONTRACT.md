@@ -126,19 +126,19 @@ Submits code for evaluation. Evaluates tests, classifies Bug Fingerprints, and m
 
 ---
 
-## 3. Explain Before You Fix (EBYF) Endpoint
+## 3. Explain Before You Fix (EBYF) Endpoints
 
-### `POST /api/explain-before-fix`
-Allows learners to reflect on the bug hypothesis before unlocking hints.
+### `POST /api/explain-before-fix/question`
+Generates a short, targeted question prompting the learner to predict a value, explain a condition, or identify the likely cause before unlocking hints.
 
 **Request Body**:
 ```json
 {
   "submissionId": "sub-1718000000-abc12",
   "learnerId": "550e8400-e29b-41d4-a716-446655440000",
-  "explanation": "I believe the loop index goes one past the end of the array",
-  "predictedVariable": "i",
-  "predictedValue": "arr.length"
+  "code": "for(let i=0; i<=arr.length; i++) sum+=arr[i];",
+  "language": "javascript",
+  "challengeId": "sum-array"
 }
 ```
 
@@ -147,8 +147,76 @@ Allows learners to reflect on the bug hypothesis before unlocking hints.
 {
   "success": true,
   "data": {
-    "feedback": "Thinking through variable bounds on boundary conditions is a great debugging strategy.",
-    "canProceedToHint": true
+    "questionId": "ebyf-q-1718000000-abc12",
+    "submissionId": "sub-1718000000-abc12",
+    "question": "Look closely at your loop stopping condition: what is the value of your loop index on the final iteration, and does it exceed the array bounds?",
+    "questionType": "explain_condition",
+    "context": "For public input [1, 2, 3], expected output is 6. Check whether your loop index reaches array.length.",
+    "isFallback": false
+  }
+}
+```
+
+---
+
+### `GET /api/explain-before-fix/question`
+Fetches or generates the EBYF question for a submission.
+
+**Query Parameters**:
+- `submissionId` (string, required)
+- `learnerId` (string, required)
+
+---
+
+### `POST /api/explain-before-fix`
+Evaluates the learner's explanation against the known concept and authoritative execution result. Accepts reasonable alternative explanations.
+
+**Request Body**:
+```json
+{
+  "submissionId": "sub-1718000000-abc12",
+  "learnerId": "550e8400-e29b-41d4-a716-446655440000",
+  "explanation": "I believe the loop index i goes one past the end because it uses <= arr.length",
+  "predictedVariable": "i",
+  "predictedValue": "arr.length"
+}
+```
+
+**Validation & Safety Rules**:
+- `explanation`: string, minimum 5 characters, maximum 4000 characters.
+- `submissionId` and `learnerId`: required strings.
+- `code` (if passed): maximum 64 KB.
+- Hidden tests are strictly protected: no hidden tests or expected outputs are exposed to AI or learner.
+- Evaluates pedagogical understanding without requiring an exact sentence match.
+- If AI is unavailable or fails, returns a rule-based fallback evaluation.
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "data": {
+    "feedback": "Spot-on reflection! You accurately identified that the loop boundary condition causes an off-by-one or out-of-bounds error. Check your loop comparison operator against the array length.",
+    "evaluation": "correct",
+    "understoodCorrectly": "You accurately recognized that the loop boundary or index traversal is causing an out-of-bounds or off-by-one issue.",
+    "toReconsider": "Check whether switching your loop comparison from <= to < or adjusting your stopping index resolves the issue.",
+    "canProceedToHint": true,
+    "isFallback": false
+  }
+}
+```
+
+---
+
+### `GET /api/explain-before-fix/status/:learnerId/:submissionId`
+Returns whether the learner has completed the EBYF reflection step.
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "data": {
+    "hasCompletedEbyf": true,
+    "record": { ... }
   }
 }
 ```
@@ -253,8 +321,8 @@ Returns learning telemetry, attempt counts, and frequency of recurring bug patte
       }
     ],
     "recurringMistakes": [
-      { "patternKey": "loop_condition", "count": 2 },
-      { "patternKey": "off_by_one", "count": 1 }
+      { "patternKey": "loop_boundary", "count": 2 },
+      { "patternKey": "wrong_index", "count": 1 }
     ]
   }
 }
@@ -355,5 +423,61 @@ Generates structured diagnostic feedback after a learner submits code, analyzing
   }
 }
 ```
+
+---
+
+## 8. Adaptive Challenge Recommendation Endpoints
+
+### `GET /api/recommendations/:learnerId`
+Recommends an existing challenge from the catalog based on the learner's recent results, skill topics, recurring Bug Fingerprints, and difficulty progression.
+
+**Query Parameters**:
+- `currentChallengeId` (string, optional): Current challenge ID to avoid immediate repetition.
+- `allowReview` (boolean, optional): If `true`, permits recommending already completed challenges for review when all challenges are solved.
+
+**Response `200 OK`**:
+```json
+{
+  "success": true,
+  "data": {
+    "challenge": {
+      "id": "reverse-string",
+      "title": "Reverse a String",
+      "description": "Write a function that returns the reverse of a given string. Return an empty string if the input is empty.",
+      "difficulty": "beginner",
+      "skills": ["strings", "loops", "indexing"],
+      "targetedPatterns": ["loop_boundary", "wrong_index", "empty_input"],
+      "languages": ["javascript", "java"]
+    },
+    "reason": "Recommended to help you master loop boundary conditions and eliminate off-by-one errors based on your recent attempts.",
+    "strategy": "repeated_mistake_remediation",
+    "learnerId": "550e8400-e29b-41d4-a716-446655440000",
+    "catalogCompleted": false
+  }
+}
+```
+
+**Strategies**:
+- `new_learner_default`: Foundational beginner challenge for learners with missing or zero-attempt history.
+- `repeated_mistake_remediation`: Targets an unsolved challenge addressing the learner's top recurring bug pattern.
+- `difficulty_progression`: Advances learner to next difficulty tier (e.g. beginner to intermediate) after solving prerequisites.
+- `skill_expansion`: Recommends an unsolved challenge in current tier to expand into new skill topics.
+- `intentional_review`: Recommends challenge with highest hints/attempts when all challenges are solved and `allowReview` is enabled.
+- `catalog_completed`: Returned when all catalog challenges are solved and `allowReview` is disabled.
+
+---
+
+### `POST /api/recommendations`
+Supports recommendation generation via request body payload.
+
+**Request Body**:
+```json
+{
+  "learnerId": "550e8400-e29b-41d4-a716-446655440000",
+  "currentChallengeId": "sum-array",
+  "allowReview": false
+}
+```
+
 
 

@@ -4,6 +4,7 @@ import { seedChallenges, getChallengeById } from './seedChallenges.js';
 const submissions = new Map();
 const hintHistory = [];
 const ebyfRecords = new Map();
+const ebyfQuestions = new Map();
 const bugFingerprints = [];
 const learnerProgress = new Map();
 
@@ -25,6 +26,21 @@ export const store = {
   },
 
   // Explain Before You Fix (EBYF)
+  saveEbyfQuestion(record) {
+    const key = `${record.learnerId || 'anon'}:${record.submissionId}`;
+    const data = {
+      ...record,
+      id: record.id || `ebyf-q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString()
+    };
+    ebyfQuestions.set(key, data);
+    return data;
+  },
+
+  getEbyfQuestion(learnerId, submissionId) {
+    return ebyfQuestions.get(`${learnerId || 'anon'}:${submissionId}`) || null;
+  },
+
   saveEbyf(record) {
     const key = `${record.learnerId}:${record.submissionId}`;
     const data = {
@@ -163,6 +179,7 @@ export const store = {
     submissions.clear();
     hintHistory.length = 0;
     ebyfRecords.clear();
+    ebyfQuestions.clear();
     bugFingerprints.length = 0;
     learnerProgress.clear();
   }
