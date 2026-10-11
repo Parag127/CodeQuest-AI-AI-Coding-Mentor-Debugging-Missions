@@ -71,7 +71,7 @@ function dispatch(app, { method, path, body = null, query = null }) {
   });
 }
 
-describe('CodeDNA Adaptive Challenge Recommendation Feature', () => {
+describe('DebugMate Adaptive Challenge Recommendation Feature', () => {
   beforeEach(() => {
     store.reset();
   });

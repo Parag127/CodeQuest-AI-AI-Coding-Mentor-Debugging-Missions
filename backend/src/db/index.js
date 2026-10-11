@@ -5,10 +5,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Database path defaults to /tmp on Vercel or backend/data/codedna.db locally
+// Database path defaults to /tmp on Vercel or backend/data/debugmate.db locally
 const defaultDbPath = process.env.VERCEL
-  ? path.join('/tmp', 'codedna.db')
-  : path.resolve(__dirname, '../../data/codedna.db');
+  ? path.join('/tmp', 'debugmate.db')
+  : path.resolve(__dirname, '../../data/debugmate.db');
 const dbPath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbPath;
 
 let Database;
@@ -68,8 +68,8 @@ function findLargest(numbers) {
 
 const input = fs.readFileSync(0, 'utf-8').trim();
 if (input.length > 0) {
-  const lines = input.split('\\n');
-  const numbers = (lines[1] || lines[0]).trim().split(/\\s+/).map(Number);
+  const lines = input.replace(/\\n/g, '\n').split('\n');
+  const numbers = (lines[1] || lines[0]).trim().split(/\s+/).map(Number);
   console.log(findLargest(numbers));
 }`,
       starter_code_java: `import java.util.Scanner;
@@ -156,12 +156,12 @@ const input = fs.readFileSync(0, 'utf-8').trim();
 if (!input) {
   console.log(0);
 } else {
-  const lines = input.split('\\n');
+  const lines = input.replace(/\\n/g, '\n').split('\n');
   const count = parseInt(lines[0], 10);
   if (count === 0 || !lines[1]) {
     console.log(0);
   } else {
-    const numbers = lines[1].trim().split(/\\s+/).map(Number);
+    const numbers = lines[1].trim().split(/\s+/).map(Number);
     console.log(sumPositive(numbers));
   }
 }`,
@@ -208,7 +208,7 @@ public class Main {
     { id: 'hidden-2', challenge_id: 'largest-number', is_public: 0, stdin: '4\n100 50 100 25\n', expected_output: '100\n', ordinal: 5 },
     { id: 'tc-rev-1', challenge_id: 'reverse-string', is_public: 1, stdin: 'hello\n', expected_output: 'olleh\n', ordinal: 1 },
     { id: 'tc-rev-2', challenge_id: 'reverse-string', is_public: 1, stdin: 'world\n', expected_output: 'dlrow\n', ordinal: 2 },
-    { id: 'tc-rev-3', challenge_id: 'reverse-string', is_public: 1, stdin: 'CodeDNA\n', expected_output: 'ANDedoC\n', ordinal: 3 },
+    { id: 'tc-rev-3', challenge_id: 'reverse-string', is_public: 1, stdin: 'DebugMate\n', expected_output: 'etaMtugeD\n', ordinal: 3 },
     { id: 'tc-rev-4-h', challenge_id: 'reverse-string', is_public: 0, stdin: 'racecar\n', expected_output: 'racecar\n', ordinal: 4 },
     { id: 'tc-rev-5-h', challenge_id: 'reverse-string', is_public: 0, stdin: '1234567890\n', expected_output: '0987654321\n', ordinal: 5 },
     { id: 'sum-pos-1', challenge_id: 'sum-positive', is_public: 1, stdin: '4\n1 2 3 4\n', expected_output: '10\n', ordinal: 1 },
@@ -220,6 +220,8 @@ public class Main {
 
   const inMemorySubmissions = new Map();
   const inMemoryUsers = new Map([
+    ['learner@debugmate.dev', { id: '1', name: 'DebugMate Learner', email: 'learner@debugmate.dev', password_hash: 'password123', role: 'learner', avatar: 'DL', level: 'Level 4 • Bug Hunter', xp: 1420, auth_provider: 'local' }],
+    ['mentor@debugmate.dev', { id: '2', name: 'Lead Reviewer', email: 'mentor@debugmate.dev', password_hash: 'password123', role: 'reviewer', avatar: 'LR', level: 'Mentor & Evaluator', xp: 5000, auth_provider: 'local' }],
     ['learner@dypatil.edu', { id: '3', name: 'DebugMate Learner', email: 'learner@dypatil.edu', password_hash: 'password123', role: 'learner', avatar: 'DL', level: 'Level 4 • Bug Hunter', xp: 1420, auth_provider: 'local' }],
     ['mentor@dypatil.edu', { id: '4', name: 'Lead Reviewer', email: 'mentor@dypatil.edu', password_hash: 'password123', role: 'reviewer', avatar: 'LR', level: 'Mentor & Evaluator', xp: 5000, auth_provider: 'local' }]
   ]);

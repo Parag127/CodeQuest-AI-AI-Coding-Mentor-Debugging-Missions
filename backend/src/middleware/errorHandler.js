@@ -1,6 +1,6 @@
 /**
  * Centralized Error and 404 Handling Middleware
- * Adheres to CodeDNA API_CONTRACT.md and SYSTEM_DESIGN.md specifications.
+ * Adheres to DebugMate API_CONTRACT.md and SYSTEM_DESIGN.md specifications.
  */
 
 /**

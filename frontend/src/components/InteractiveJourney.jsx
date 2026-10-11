@@ -45,7 +45,7 @@ const JOURNEY_STEPS = [
     stepNum: '04',
     label: 'Mastery Profile',
     title: 'Bug Fingerprint & Telemetry',
-    desc: 'CodeDNA tracks recurring mistake tendencies across missions (Off-by-one, Null Unchecked, State Mutation). Learners build an authentic engineering profile ready for job placements.',
+    desc: 'DebugMate tracks recurring mistake tendencies across missions (Off-by-one, Null Unchecked, State Mutation). Learners build an authentic engineering profile ready for job placements.',
     tag: 'Step 04 • Continuous Mastery',
     visualIcon: Award,
     visualContent: {
@@ -76,7 +76,7 @@ export default function InteractiveJourney() {
         <div className="section-header">
           <div className="section-badge">
             <Sparkles size={14} />
-            <span>The CodeDNA Philosophy</span>
+            <span>The DebugMate Philosophy</span>
           </div>
           <h2 className="section-title">
             The 4-Stage Debugging <br />

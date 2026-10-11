@@ -72,7 +72,7 @@ app.use(express.json({ limit: '100kb' }));
 // In-memory sprint items store
 let hackathonItems = [
   { id: 1, title: 'Dockerize Backend Service', category: 'DevOps', status: 'Completed', timestamp: new Date().toISOString() },
-  { id: 2, title: 'Build CodeDNA Microservice', category: 'DevOps', status: 'Completed', timestamp: new Date().toISOString() },
+  { id: 2, title: 'Build DebugMate Microservice', category: 'DevOps', status: 'Completed', timestamp: new Date().toISOString() },
   { id: 3, title: 'Configure AI Hint Pipeline', category: 'AI', status: 'In Progress', timestamp: new Date().toISOString() }
 ];
 
@@ -87,7 +87,7 @@ const staticDistPath = [
 });
 
 const apiCatalog = {
-  name: 'CodeDNA API',
+  name: 'DebugMate API',
   status: 'Running',
   version: '1.0.0',
   endpoints: [
@@ -136,7 +136,7 @@ app.use('/api/auth', authRouter);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
-    service: 'codedna-api',
+    service: 'debugmate-api',
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -203,7 +203,7 @@ app.delete('/api/items/:id', (req, res) => {
   res.json({ success: true, message: `Item ${itemId} deleted successfully` });
 });
 
-// CodeDNA Routes (Standard /api prefix)
+// DebugMate Routes (Standard /api prefix)
 app.use('/api/challenges', challengesRouter);
 app.use('/api/submissions', submissionsRouter);
 app.use('/api/hints', hintsRouter);
@@ -253,7 +253,7 @@ const isTestEnv = process.env.NODE_ENV === 'test' ||
 let server;
 if (isMainModule && !isTestEnv) {
   server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 CodeDNA Backend API running on port ${PORT}`);
+    console.log(`🚀 DebugMate Backend API running on port ${PORT}`);
     console.log(`🌐 Health check available at http://localhost:${PORT}/api/health`);
     console.log(`📚 Challenges endpoint available at http://localhost:${PORT}/api/challenges`);
   });

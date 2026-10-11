@@ -1,4 +1,4 @@
-﻿# CodeDNA — System Design Document
+# DebugMate — System Design Document
 
 > **Status:** Design document only. No feature described here is implemented unless explicitly marked **VERIFIED**.
 > **Scope:** MVP. 3-person team. 12-hour hackathon build.
@@ -32,7 +32,7 @@
 
 ## 1. Project Overview and Goals
 
-**CodeDNA** is a beginner-focused programming education platform. Its core insight is that understanding _why_ code is broken produces better learning than copying correct answers.
+**DebugMate** is a beginner-focused programming education platform. Its core insight is that understanding _why_ code is broken produces better learning than copying correct answers.
 
 ### MVP Goals
 
@@ -91,7 +91,7 @@ The single file backend/src/index.js provides:
 - POST /api/items -- add item
 - DELETE /api/items/:id -- delete item
 
-**No CodeDNA features exist in the backend.** No challenge routes, no submission routes, no code execution, no Gemini integration, no database.
+**No DebugMate features exist in the backend.** No challenge routes, no submission routes, no code execution, no Gemini integration, no database.
 
 ### What the Frontend Currently Does
 
@@ -101,7 +101,7 @@ The single App.jsx renders a Docker status dashboard with four components:
 - ApiTester.jsx -- interactive item CRUD tester
 - DockerGuideCard.jsx -- Docker command cheatsheet
 
-**No CodeDNA features exist in the frontend.** No challenge browser, no code editor, no submission flow, no hint panel.
+**No DebugMate features exist in the frontend.** No challenge browser, no code editor, no submission flow, no hint panel.
 
 ### Existing Backend Dependencies
 
@@ -112,7 +112,7 @@ The single App.jsx renders a Docker status dashboard with four components:
 | dotenv | ^16.4.7 | Environment variables |
 | nodemon | ^3.1.9 (dev) | Hot reload |
 
-Missing for CodeDNA: database driver, HTTP client for Judge0/Gemini, request size limiter, input validation library.
+Missing for DebugMate: database driver, HTTP client for Judge0/Gemini, request size limiter, input validation library.
 
 ### Existing Frontend Dependencies
 
@@ -123,7 +123,7 @@ Missing for CodeDNA: database driver, HTTP client for Judge0/Gemini, request siz
 | lucide-react | ^1.16.0 | Icons |
 | vite | ^5.4.11 (dev) | Build tool |
 
-Missing for CodeDNA: code editor component, routing (React Router), HTTP client abstraction.
+Missing for DebugMate: code editor component, routing (React Router), HTTP client abstraction.
 
 ---
 
@@ -651,7 +651,7 @@ EBYF is triggered when a learner requests a hint after their first failed submis
 
 ## 15. Frontend Component Structure
 
-Current state: The frontend is a Docker dashboard with no CodeDNA features. All components below are new and must be built.
+Current state: The frontend is a Docker dashboard with no DebugMate features. All components below are new and must be built.
 
 ### Page Structure
 
@@ -693,7 +693,7 @@ Fallback: react-codemirror2 (smaller bundle, easier setup).
 ### Member 1 -- Frontend and User Experience
 
 Owns:
-- frontend/src/ -- all CodeDNA pages and components
+- frontend/src/ -- all DebugMate pages and components
 - React Router setup
 - Code editor integration (Monaco)
 - Submission flow (calls POST /api/submissions)
@@ -831,7 +831,7 @@ Hours are relative to kickoff.
 | Task | All | |
 |---|---|---|
 | Prepare demo walkthrough | All | |
-| Update README with CodeDNA setup steps | M2 | |
+| Update README with DebugMate setup steps | M2 | |
 | Git tag: mvp-demo | All | |
 
 ### Fallback Plan (If Judge0 Integration Fails by Hour 5)

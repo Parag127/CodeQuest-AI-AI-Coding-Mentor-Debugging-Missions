@@ -1,4 +1,4 @@
-// Seed challenges for CodeDNA catalog
+// Seed challenges for DebugMate catalog
 export const seedChallenges = [
   {
     id: 'sum-array',

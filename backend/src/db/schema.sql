@@ -1,4 +1,4 @@
--- CodeDNA SQLite Schema
+-- DebugMate SQLite Schema
 -- Defines core tables for challenges, test cases, submissions, results, hints, fingerprints, and learner progress.
 
 PRAGMA foreign_keys = ON;

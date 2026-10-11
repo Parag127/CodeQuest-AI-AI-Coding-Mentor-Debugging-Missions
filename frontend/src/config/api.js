@@ -1,5 +1,5 @@
 /**
- * CodeDNA API Configuration & Client Adapter
+ * DebugMate API Configuration & Client Adapter
  * 
  * Manages backend target resolution across local dev, Docker, Vercel Serverless, and cloud providers (Render).
  * Supports:
@@ -9,7 +9,7 @@
  * - Safe JSON parsing with automatic HTML-response detection
  */
 
-const STORAGE_KEY = 'codedna_api_url';
+const STORAGE_KEY = 'debugmate_api_url';
 
 /**
  * Returns the currently active backend API base URL (without trailing slash).
@@ -68,7 +68,7 @@ export function setCustomApiBase(url) {
   } else {
     localStorage.setItem(STORAGE_KEY, clean);
   }
-  window.dispatchEvent(new CustomEvent('codedna_api_changed', { detail: { url: clean } }));
+  window.dispatchEvent(new CustomEvent('debugmate_api_changed', { detail: { url: clean } }));
 }
 
 /**
@@ -77,7 +77,8 @@ export function setCustomApiBase(url) {
 export function resetCustomApiBase() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new CustomEvent('codedna_api_changed', { detail: { url: getApiBase() } }));
+  const base = getApiBase();
+  window.dispatchEvent(new CustomEvent('debugmate_api_changed', { detail: { url: base } }));
 }
 
 /**

@@ -73,7 +73,7 @@ function dispatch(app, { method, path, body = null, query = null }) {
   });
 }
 
-describe('CodeDNA Explain Before You Fix (EBYF) Feature', () => {
+describe('DebugMate Explain Before You Fix (EBYF) Feature', () => {
   let app;
 
   beforeEach(() => {

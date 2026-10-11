@@ -1,7 +1,7 @@
-# MVP Scope — CodeQuest AI & CodeDNA
+# MVP Scope — DebugMate
 
 ## 1. Overview
-CodeQuest AI (CodeDNA) is a beginner-friendly programming practice platform focused on learning to **debug**, rather than copying pre-generated AI solutions. The initial MVP supports Java and JavaScript challenge submissions, test-by-test feedback, progressive hints, recurring mistake tracking (Bug Fingerprint), an Explain Before You Fix flow, and adaptive recommendations.
+DebugMate is a beginner-friendly programming practice platform focused on learning to **debug**, rather than copying pre-generated AI solutions. The initial MVP supports Java and JavaScript challenge submissions, test-by-test feedback, progressive hints, recurring mistake tracking (Bug Fingerprint), an Explain Before You Fix flow, and adaptive recommendations.
 
 ## 2. Supported Languages (MVP)
 - **JavaScript** (Node.js 18+ / ES Modules)
@@ -14,7 +14,7 @@ CodeQuest AI (CodeDNA) is a beginner-friendly programming practice platform focu
 ### Frontend Experience
 1. **Interactive Navigation & Themes**: Floating glass island navigation bar with live operational probe indicator and dual theme support (Cyber Dark & Canvas Light).
 2. **Hero & Pedagogical Journey**: Interactive 4-stage pedagogical journey and typographic showcase.
-3. **CodeDNA Debugging Mission Sandbox**:
+3. **DebugMate Debugging Mission Sandbox**:
    - Curated debugging challenges with Java & JavaScript parity.
    - "Explain Before You Fix" cognitive hypothesis gate.
    - 3-tier progressive hint ladder (Conceptual Nudge -> Location/Logic -> Debugging Direction).

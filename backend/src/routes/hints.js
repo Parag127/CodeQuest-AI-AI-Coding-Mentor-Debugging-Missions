@@ -11,7 +11,7 @@ const router = express.Router();
  * POST /api/hints
  * Progressive 3-level hinting endpoint.
  *
- * Supports both CodeDNA DB submission workflow and in-memory store sessions.
+ * Supports both DebugMate DB submission workflow and in-memory store sessions.
  */
 router.post('/', async (req, res) => {
   try {

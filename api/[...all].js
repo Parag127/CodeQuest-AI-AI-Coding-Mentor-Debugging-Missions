@@ -1,5 +1,5 @@
 /**
- * Vercel Serverless Function catch-all entrypoint for CodeDNA API.
+ * Vercel Serverless Function catch-all entrypoint for DebugMate API.
  * Handles subroutes like /api/challenges, /api/submissions, /api/health, etc.
  */
 import app from '../backend/src/index.js';

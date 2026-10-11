@@ -13,7 +13,7 @@ import {
   DEFAULT_GEMINI_MODEL
 } from '../services/geminiService.js';
 
-describe('CodeDNA Step 7 — Gemini AI Integration Checklist', () => {
+describe('DebugMate Step 7 — Gemini AI Integration Checklist', () => {
   let app;
   let server;
   let baseUrl;

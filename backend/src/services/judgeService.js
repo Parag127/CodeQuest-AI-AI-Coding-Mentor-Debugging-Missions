@@ -3,7 +3,7 @@
  * Handles code submission to Judge0 CE / RapidAPI, asynchronous polling,
  * status mapping, timeout/memory limits, authentication, and safe offline mock simulation.
  * 
- * Adheres strictly to CodeDNA SECURITY.md & SYSTEM_DESIGN.md specifications:
+ * Adheres strictly to DebugMate SECURITY.md & SYSTEM_DESIGN.md specifications:
  * - Never executes untrusted learner code in the Express process.
  * - Enforces wall-clock, CPU, and memory limits via the isolated runner.
  * - Protects hidden test inputs and expected outputs.

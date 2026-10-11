@@ -1,10 +1,10 @@
-# CodeDNA — Team Task Allocation & Roadmap
+# DebugMate — Team Task Allocation & Roadmap
 
 ## 1. Team Responsibilities
 
 ### Member 1: Frontend & User Experience
 - Setup React Router with routes (`/`, `/challenge/:id`, `/progress`).
-- Replace Docker demo UI with CodeDNA UI.
+- Replace Docker demo UI with DebugMate UI.
 - Implement Monaco Editor or CodeMirror with Java and JavaScript syntax highlighting.
 - Build Results Panel displaying per-test outcomes and Bug Fingerprint tags.
 - Build Explain Before You Fix (EBYF) modal and Hint progression panel (Levels 1–3).
@@ -43,6 +43,6 @@
 - [x] Adaptive Challenge Recommendation API (`GET /api/recommendations/:learnerId`)
 - [x] Learning Progress & Recurring Mistakes API (`GET /api/progress/:learnerId`)
 - [x] Automated test suite with mocked Gemini client (109 passing tests)
-- [x] Frontend CodeDNA components integration (MissionSandbox, EBYF gate, hints, results)
+- [x] Frontend DebugMate components integration (MissionSandbox, EBYF gate, hints, results)
 - [x] Final Integration and Security Verification Suite (241 passing tests across 84 suites)
 - [ ] Live Judge0 code execution runner for production deployment (Member 2)

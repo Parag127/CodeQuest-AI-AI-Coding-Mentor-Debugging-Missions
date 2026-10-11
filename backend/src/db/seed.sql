@@ -1,4 +1,4 @@
--- CodeDNA Seed Data
+-- DebugMate Seed Data
 -- Seed challenges and test cases matching API_CONTRACT.md
 
 -- Challenge 1: Find the largest number (Matches API_CONTRACT.md)
@@ -36,7 +36,7 @@ function findLargest(numbers) {
 
 const input = fs.readFileSync(0, ''utf-8'').trim();
 if (input.length > 0) {
-  const lines = input.split(''\n'');
+  const lines = input.replace(/\\n/g, ''\n'').split(''\n'');
   const numbers = (lines[1] || lines[0]).trim().split(/\s+/).map(Number);
   console.log(findLargest(numbers));
 }',
@@ -136,7 +136,7 @@ INSERT OR IGNORE INTO test_cases (id, challenge_id, is_public, stdin, expected_o
 VALUES
   ('tc-rev-1', 'reverse-string', 1, 'hello\n', 'olleh\n', 1),
   ('tc-rev-2', 'reverse-string', 1, 'world\n', 'dlrow\n', 2),
-  ('tc-rev-3', 'reverse-string', 1, 'CodeDNA\n', 'ANDedoC\n', 3),
+  ('tc-rev-3', 'reverse-string', 1, 'DebugMate\n', 'etaMtugeD\n', 3),
   ('tc-rev-4-h', 'reverse-string', 0, 'racecar\n', 'racecar\n', 4),
   ('tc-rev-5-h', 'reverse-string', 0, '1234567890\n', '0987654321\n', 5);
 
@@ -175,7 +175,7 @@ const input = fs.readFileSync(0, ''utf-8'').trim();
 if (!input) {
   console.log(0);
 } else {
-  const lines = input.split(''\n'');
+  const lines = input.replace(/\\n/g, ''\n'').split(''\n'');
   const count = parseInt(lines[0], 10);
   if (count === 0 || !lines[1]) {
     console.log(0);

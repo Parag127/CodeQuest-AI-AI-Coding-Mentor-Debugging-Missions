@@ -1,4 +1,4 @@
-# API Contract — CodeQuest AI & CodeDNA
+# API Contract — DebugMate
 
 This document defines the interface and agreement between the frontend client and backend microservices.
 
@@ -84,6 +84,10 @@ Authenticates a learner or reviewer. Supports 1-click hackathon demo accounts (`
   }
 }
 ```
+
+**Error Responses**:
+- `400 Bad Request`: Missing credentials (`{ "success": false, "error": "Email and password are required" }`) or Google-only account password login attempt.
+- `401 Unauthorized`: Account not found (`{ "success": false, "error": "No account found with this email. Please register first." }`) or incorrect password (`{ "success": false, "error": "Incorrect password. Please verify your credentials." }`).
 
 ---
 

@@ -29,7 +29,7 @@ describe('Milestone 1 — Health Endpoint, Request Validation & Error Handling T
 
       const data = await res.json();
       assert.strictEqual(data.status, 'healthy');
-      assert.strictEqual(data.service, 'codedna-api');
+      assert.strictEqual(data.service, 'debugmate-api');
       assert.ok(data.timestamp, 'timestamp missing');
       assert.ok(typeof data.uptimeSeconds === 'number', 'uptimeSeconds must be number');
       assert.ok(data.memoryUsageMB, 'memoryUsageMB missing');
@@ -121,6 +121,32 @@ describe('Milestone 1 — Health Endpoint, Request Validation & Error Handling T
       const data = await res.json();
       assert.strictEqual(data.success, false);
       assert.strictEqual(data.error, 'Email and password are required');
+    });
+
+    test('POST /api/auth/login with unregistered email returns 401 with registration prompt', async () => {
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'nobody_here@unregistered.example', password: 'password123' })
+      });
+
+      assert.strictEqual(res.status, 401);
+      const data = await res.json();
+      assert.strictEqual(data.success, false);
+      assert.match(data.error, /register first/i);
+    });
+
+    test('POST /api/auth/login with incorrect password returns 401', async () => {
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'learner@dypatil.edu', password: 'wrongPassword999' })
+      });
+
+      assert.strictEqual(res.status, 401);
+      const data = await res.json();
+      assert.strictEqual(data.success, false);
+      assert.match(data.error, /incorrect password/i);
     });
 
     test('DELETE /api/items with nonexistent ID returns 404', async () => {

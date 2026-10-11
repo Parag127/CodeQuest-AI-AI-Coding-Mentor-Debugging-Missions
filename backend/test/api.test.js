@@ -94,5 +94,41 @@ test('POST /api/auth/register creates a new user account', async () => {
   assert.equal(data.success, true);
   assert.ok(data.token);
   assert.equal(data.user.email, uniqueEmail);
+
+  // Now login with this newly registered user
+  const loginRes = await fetch(`${API_HOST}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: uniqueEmail, password: 'password123' })
+  });
+  assert.equal(loginRes.status, 200);
+  const loginData = await loginRes.json();
+  assert.equal(loginData.success, true);
+  assert.equal(loginData.user.email, uniqueEmail);
+});
+
+test('POST /api/auth/login rejects unregistered email with 401', async () => {
+  const unregisteredEmail = `unregistered_${Date.now()}@nonexistent.domain`;
+  const res = await fetch(`${API_HOST}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: unregisteredEmail, password: 'anyPassword123' })
+  });
+  assert.equal(res.status, 401);
+  const data = await res.json();
+  assert.equal(data.success, false);
+  assert.match(data.error, /register first/i);
+});
+
+test('POST /api/auth/login rejects incorrect password with 401', async () => {
+  const res = await fetch(`${API_HOST}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'learner@dypatil.edu', password: 'wrongPasswordXYZ' })
+  });
+  assert.equal(res.status, 401);
+  const data = await res.json();
+  assert.equal(data.success, false);
+  assert.match(data.error, /incorrect password/i);
 });
 

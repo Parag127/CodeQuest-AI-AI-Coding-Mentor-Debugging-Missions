@@ -36,7 +36,7 @@ async function dispatch(app, { method, path, body = null }) {
   });
 }
 
-describe('CodeDNA Progressive Hints Feature', () => {
+describe('DebugMate Progressive Hints Feature', () => {
   let app;
 
   beforeEach(() => {

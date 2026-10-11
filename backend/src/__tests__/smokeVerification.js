@@ -1,6 +1,6 @@
 /**
  * End-to-End Live Verification Script
- * Validates actual runtime integration of all CodeDNA endpoints,
+ * Validates actual runtime integration of all DebugMate endpoints,
  * security boundaries, hidden test privacy invariants, and error resilience.
  */
 import app from '../index.js';
@@ -38,7 +38,7 @@ const check = (description, condition) => {
 
 async function run() {
   console.log('\n=============================================');
-  console.log('   CodeDNA End-to-End Live Verification');
+  console.log('   DebugMate End-to-End Live Verification');
   console.log('=============================================\n');
 
   process.env.JUDGE0_MOCK_RUNNER = 'true';
@@ -52,7 +52,7 @@ async function run() {
     check('Health response status is 200', healthRes.status === 200);
     const healthData = await healthRes.json();
     check('Health status is healthy', healthData.status === 'healthy');
-    check('Health includes service identifier', healthData.service === 'codedna-api');
+    check('Health includes service identifier', healthData.service === 'debugmate-api');
     check('Health includes memory usage metrics', typeof healthData.memoryUsageMB?.heapUsed === 'number');
 
     // 2. Info Probe

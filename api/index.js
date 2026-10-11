@@ -1,5 +1,5 @@
 /**
- * Vercel Serverless Function entrypoint for CodeDNA API.
+ * Vercel Serverless Function entrypoint for DebugMate API.
  * Routes /api requests to the Express application backend.
  */
 import app from '../backend/src/index.js';

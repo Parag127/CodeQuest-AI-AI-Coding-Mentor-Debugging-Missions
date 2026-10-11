@@ -130,22 +130,30 @@ export default function LoginPage({
         setErrorMessage(data.error || 'Authentication failed. Please verify your credentials.');
       }
     } catch (err) {
-      console.warn('Backend server offline fallback:', err);
-      // Demo fallback for seamless experience
-      const fallbackUser = {
-        id: Date.now(),
-        name: name.trim() || (email.includes('@') ? email.split('@')[0] : 'DebugMate Developer'),
-        email: email.trim(),
-        role: selectedRole,
-        avatar: (name || email).substring(0, 2).toUpperCase(),
-        level: selectedRole === 'learner' ? 'Level 4 • Bug Hunter' : 'Lead Reviewer',
-        xp: 1850
-      };
-      setSuccessMessage(`Welcome, ${fallbackUser.name}! Authenticated in Offline Demo Mode.`);
-      setTimeout(() => {
-        onLoginSuccess(fallbackUser);
-        onNavigateHome();
-      }, 800);
+      console.warn('Backend server connection error:', err);
+      const normalizedEmail = email.trim().toLowerCase();
+      const isKnownDemoAccount = ['learner@debugmate.dev', 'learner@dypatil.edu', 'mentor@debugmate.dev', 'mentor@dypatil.edu'].includes(normalizedEmail);
+
+      if (authMode === 'login' && isKnownDemoAccount && password.trim() === 'password123') {
+        const fallbackUser = {
+          id: normalizedEmail.includes('learner') ? 1 : 2,
+          name: normalizedEmail.includes('learner') ? 'DebugMate Learner' : 'Lead Reviewer',
+          email: normalizedEmail,
+          role: selectedRole,
+          avatar: normalizedEmail.includes('learner') ? 'DL' : 'LR',
+          level: selectedRole === 'learner' ? 'Level 4 • Bug Hunter' : 'Lead Reviewer',
+          xp: selectedRole === 'learner' ? 1420 : 5000
+        };
+        setSuccessMessage(`Welcome, ${fallbackUser.name}! Authenticated in Offline Demo Mode.`);
+        setTimeout(() => {
+          onLoginSuccess(fallbackUser);
+          onNavigateHome();
+        }, 800);
+      } else if (authMode === 'login') {
+        setErrorMessage('Unable to connect to authentication server. If you have not registered yet, please click Register.');
+      } else {
+        setErrorMessage('Unable to connect to authentication server. Please check your network or try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -427,7 +435,31 @@ export default function LoginPage({
               {errorMessage && (
                 <div className="auth-alert error">
                   <AlertCircle size={16} />
-                  <span>{errorMessage}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
+                    <span>{errorMessage}</span>
+                    {authMode === 'login' && errorMessage.toLowerCase().includes('register') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('register');
+                          setErrorMessage('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--brand-light, #38bdf8)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textAlign: 'left',
+                          textDecoration: 'underline',
+                          fontSize: '0.82rem'
+                        }}
+                      >
+                        Don't have an account yet? Click here to Register →
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 

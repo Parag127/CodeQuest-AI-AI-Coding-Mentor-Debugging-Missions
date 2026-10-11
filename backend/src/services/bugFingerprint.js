@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 /**
- * CodeDNA Bug Fingerprint Service
+ * DebugMate Bug Fingerprint Service
  * Deterministic, rule-based classifier that identifies beginner mistake patterns
  * before applying any AI-assisted analysis.
  *

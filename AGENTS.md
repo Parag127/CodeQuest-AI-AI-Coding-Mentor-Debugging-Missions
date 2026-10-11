@@ -1,7 +1,7 @@
-# AGENTS.md — CodeDNA project instructions
+# AGENTS.md — DebugMate project instructions
 
 ## Project purpose
-CodeDNA is a beginner-friendly programming practice app focused on learning to debug, not copying complete solutions. The initial MVP supports Java and JavaScript challenge submissions, test-by-test feedback, progressive hints, recurring-mistake tracking (Bug Fingerprint), and an Explain Before You Fix flow.
+DebugMate is a beginner-friendly programming practice app focused on learning to debug, not copying complete solutions. The initial MVP supports Java and JavaScript challenge submissions, test-by-test feedback, progressive hints, recurring-mistake tracking (Bug Fingerprint), and an Explain Before You Fix flow.
 
 ## Read before changing code
 1. `README.md` — setup and scripts.

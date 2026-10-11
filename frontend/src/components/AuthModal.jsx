@@ -79,22 +79,30 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         setErrorMessage(data.error || 'Authentication failed. Please check your credentials.');
       }
     } catch (err) {
-      console.warn('Backend offline, using fallback authentication:', err);
-      // Graceful offline fallback
-      const fallbackUser = {
-        id: Date.now(),
-        name: name.trim() || email.split('@')[0] || 'DebugMate Learner',
-        email: email.trim(),
-        role: selectedRole,
-        avatar: (name || email).substring(0, 2).toUpperCase(),
-        level: selectedRole === 'learner' ? 'Level 4 • Bug Hunter' : 'Lead Reviewer',
-        xp: 1450
-      };
-      setSuccessMessage(`Welcome, ${fallbackUser.name}! (Offline Demo Mode)`);
-      setTimeout(() => {
-        onLoginSuccess(fallbackUser);
-        onClose();
-      }, 600);
+      console.warn('Backend offline connection error:', err);
+      const normalizedEmail = email.trim().toLowerCase();
+      const isKnownDemoAccount = ['learner@debugmate.dev', 'learner@dypatil.edu', 'mentor@debugmate.dev', 'mentor@dypatil.edu'].includes(normalizedEmail);
+
+      if (authMode === 'login' && isKnownDemoAccount && password.trim() === 'password123') {
+        const fallbackUser = {
+          id: normalizedEmail.includes('learner') ? 1 : 2,
+          name: normalizedEmail.includes('learner') ? 'DebugMate Learner' : 'Lead Reviewer',
+          email: normalizedEmail,
+          role: selectedRole,
+          avatar: normalizedEmail.includes('learner') ? 'DL' : 'LR',
+          level: selectedRole === 'learner' ? 'Level 4 • Bug Hunter' : 'Lead Reviewer',
+          xp: 1450
+        };
+        setSuccessMessage(`Welcome, ${fallbackUser.name}! (Offline Demo Mode)`);
+        setTimeout(() => {
+          onLoginSuccess(fallbackUser);
+          onClose();
+        }, 600);
+      } else if (authMode === 'login') {
+        setErrorMessage('Unable to connect to authentication server. If you have not registered yet, please switch to Register.');
+      } else {
+        setErrorMessage('Unable to connect to authentication server. Please check your network or try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -189,7 +197,31 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         {errorMessage && (
           <div className="auth-alert error">
             <AlertCircle size={15} />
-            <span>{errorMessage}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
+              <span>{errorMessage}</span>
+              {authMode === 'login' && errorMessage.toLowerCase().includes('register') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('register');
+                    setErrorMessage('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand-light, #38bdf8)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                    textAlign: 'left',
+                    textDecoration: 'underline',
+                    fontSize: '0.82rem'
+                  }}
+                >
+                  Don't have an account yet? Click here to Register →
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-# CodeDNA — Team Workflow & Collaboration Rules
+# DebugMate — Team Workflow & Collaboration Rules
 
 ## 1. Branching Strategy
 - `main`: Production-ready, stable codebase.

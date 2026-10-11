@@ -135,11 +135,23 @@ export function saveUser(user) {
 
 // Helper to resolve client frontend origin (auto-detects Vercel and reverse proxy headers)
 export function resolveClientOrigin(req) {
-  if (process.env.CLIENT_ORIGIN && !process.env.CLIENT_ORIGIN.includes('*')) {
-    return process.env.CLIENT_ORIGIN.split(',')[0].trim();
-  }
   const proto = req.headers?.['x-forwarded-proto'] || req.protocol || (process.env.VERCEL ? 'https' : 'http');
   const host = req.headers?.['x-forwarded-host'] || req.get?.('host');
+
+  // If on Vercel or cloud deployment, dynamically bind to incoming host origin
+  if ((process.env.VERCEL || process.env.NODE_ENV === 'production') && host) {
+    return `${proto}://${host}`;
+  }
+
+  if (process.env.CLIENT_ORIGIN && !process.env.CLIENT_ORIGIN.includes('*')) {
+    if (host) {
+      const origins = process.env.CLIENT_ORIGIN.split(',').map(o => o.trim());
+      const matchingOrigin = origins.find(o => o.includes(host));
+      if (matchingOrigin) return matchingOrigin;
+    }
+    return process.env.CLIENT_ORIGIN.split(',')[0].trim();
+  }
+
   if (host) {
     return `${proto}://${host}`;
   }
@@ -148,12 +160,14 @@ export function resolveClientOrigin(req) {
 
 // Helper to resolve Google callback redirect URI (auto-detects Vercel https domain)
 export function resolveRedirectUri(req) {
-  if (process.env.GOOGLE_CALLBACK_URL) {
-    return process.env.GOOGLE_CALLBACK_URL;
+  let uri = process.env.GOOGLE_CALLBACK_URL;
+  if (!uri) {
+    const proto = req.headers?.['x-forwarded-proto'] || req.protocol || (process.env.VERCEL ? 'https' : 'http');
+    const host = req.headers?.['x-forwarded-host'] || req.get?.('host') || 'localhost:5000';
+    uri = `${proto}://${host}/api/auth/google/callback`;
   }
-  const proto = req.headers?.['x-forwarded-proto'] || req.protocol || (process.env.VERCEL ? 'https' : 'http');
-  const host = req.headers?.['x-forwarded-host'] || req.get?.('host') || 'localhost:5000';
-  return `${proto}://${host}/api/auth/google/callback`;
+  // Sanitize duplicate slashes in the URL path (e.g., https://site.com//api -> https://site.com/api)
+  return uri.replace(/([^:]\/)\/+/g, '$1');
 }
 
 /**
@@ -179,19 +193,26 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ success: false, error: 'Email and password are required' });
   }
 
-  let user = findUserByEmail(email);
+  const user = findUserByEmail(email);
   if (!user) {
-    user = {
-      id: Date.now(),
-      name: String(email).split('@')[0],
-      email: String(email).trim(),
-      role: role || 'learner',
-      avatar: String(email).substring(0, 2).toUpperCase(),
-      level: 'Level 1 • Junior Debugger',
-      xp: 100,
-      authProvider: 'local'
-    };
-    saveUser(user);
+    return res.status(401).json({
+      success: false,
+      error: 'No account found with this email. Please register first.'
+    });
+  }
+
+  if (user.authProvider === 'google' && !user.password) {
+    return res.status(400).json({
+      success: false,
+      error: 'This account was created with Google. Please use "Continue with Google" to sign in.'
+    });
+  }
+
+  if (user.password && user.password !== password) {
+    return res.status(401).json({
+      success: false,
+      error: 'Incorrect password. Please verify your credentials.'
+    });
   }
 
   const token = generateToken(user);

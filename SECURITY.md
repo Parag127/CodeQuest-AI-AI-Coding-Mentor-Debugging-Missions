@@ -1,4 +1,4 @@
-# Security Policy & Execution Rules — CodeDNA / CodeQuest AI
+# Security Policy & Execution Rules — DebugMate
 
 ## Mandatory Security Rules (Non-Negotiable)
 

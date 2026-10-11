@@ -1,4 +1,4 @@
-# 🚀 Merge Request: Skilotech Modern UI, CodeDNA Debugging Sandbox & Authentication
+# 🚀 Merge Request: Skilotech Modern UI, DebugMate Debugging Sandbox & Authentication
 
 **To**: Team Leader / Lead Reviewer  
 **From**: Frontend & Full-Stack Development Team  
@@ -12,9 +12,9 @@
 
 ## 📌 Executive Summary
 
-This Merge Request delivers the complete, production-grade frontend architecture and microservice integration for **CodeQuest AI** (CodeDNA), adhering to the **Skilotech-inspired design system** requested for the D.Y. Patil Hackathon.
+This Merge Request delivers the complete, production-grade frontend architecture and microservice integration for **DebugMate**, adhering to the **Skilotech-inspired design system** requested for the D.Y. Patil Hackathon.
 
-It replaces static placeholders with a dynamic, dual-theme debugging practice ecosystem featuring an interactive CodeDNA sandbox, progressive hint ladder, "Explain Before You Fix" cognitive hypothesis gate, live system telemetry, and a full-screen dedicated authentication portal.
+It replaces static placeholders with a dynamic, dual-theme debugging practice ecosystem featuring an interactive DebugMate sandbox, progressive hint ladder, "Explain Before You Fix" cognitive hypothesis gate, live system telemetry, and a full-screen dedicated authentication portal.
 
 ---
 
@@ -25,7 +25,7 @@ It replaces static placeholders with a dynamic, dual-theme debugging practice ec
 * **Aesthetics**: Floating glass island navbar, typographic background watermark (`CODEQUEST`), ambient glowing mesh orbs, and chapter hairline dividers.
 * **Tech Marquee**: Infinite hardware & framework marquee with gradient edge masks.
 
-### 2. CodeDNA Debugging Sandbox (`frontend/src/components/MissionSandbox.jsx`)
+### 2. DebugMate Debugging Sandbox (`frontend/src/components/MissionSandbox.jsx`)
 * **3 Curated Missions**:
   1. *Off-by-One Array Bounds Traversal*
   2. *Null Pointer & Undefined Reference Guards*
@@ -103,7 +103,7 @@ npm run dev
 * `frontend/src/pages/LoginPage.jsx` (New dedicated full-screen login page)
 * `frontend/src/components/Navbar.jsx` (New floating island navbar with auth pills)
 * `frontend/src/components/HeroSection.jsx` (New interactive macOS IDE hero)
-* `frontend/src/components/MissionSandbox.jsx` (New CodeDNA debugging sandbox)
+* `frontend/src/components/MissionSandbox.jsx` (New DebugMate debugging sandbox)
 * `frontend/src/components/ShowcaseBrowser.jsx` (New 4-tab telemetry browser)
 * `frontend/src/components/InteractiveJourney.jsx` (New 4-stage learning journey)
 * `frontend/src/components/BentoGrid.jsx` (New architecture bento grid)

@@ -66,8 +66,8 @@ function findLargest(numbers) {
 
 const input = fs.readFileSync(0, 'utf-8').trim();
 if (input.length > 0) {
-  const lines = input.split('\\n');
-  const numbers = (lines[1] || lines[0]).trim().split(/\\s+/).map(Number);
+  const lines = input.replace(/\\n/g, '\n').split('\n');
+  const numbers = (lines[1] || lines[0]).trim().split(/\s+/).map(Number);
   console.log(findLargest(numbers));
 }`,
       java: `import java.util.Scanner;
@@ -98,9 +98,9 @@ public class Main {
 }`
     },
     visibleTests: [
-      { id: 'visible-1', stdin: '4\\n2 5 1 9\\n', expectedStdout: '9\\n' },
-      { id: 'visible-2', stdin: '3\\n10 20 30\\n', expectedStdout: '30\\n' },
-      { id: 'visible-3', stdin: '1\\n42\\n', expectedStdout: '42\\n' }
+      { id: 'visible-1', stdin: '4\n2 5 1 9\n', expectedStdout: '9\n' },
+      { id: 'visible-2', stdin: '3\n10 20 30\n', expectedStdout: '30\n' },
+      { id: 'visible-3', stdin: '1\n42\n', expectedStdout: '42\n' }
     ]
   },
   {
@@ -138,9 +138,9 @@ public class Main {
 }`
     },
     visibleTests: [
-      { id: 'tc-rev-1', stdin: 'hello\\n', expectedStdout: 'olleh\\n' },
-      { id: 'tc-rev-2', stdin: 'world\\n', expectedStdout: 'dlrow\\n' },
-      { id: 'tc-rev-3', stdin: 'CodeDNA\\n', expectedStdout: 'ANDedoC\\n' }
+      { id: 'tc-rev-1', stdin: 'hello\n', expectedStdout: 'olleh\n' },
+      { id: 'tc-rev-2', stdin: 'world\n', expectedStdout: 'dlrow\n' },
+      { id: 'tc-rev-3', stdin: 'DebugMate\n', expectedStdout: 'etaMtugeD\n' }
     ]
   },
   {
@@ -166,12 +166,12 @@ const input = fs.readFileSync(0, 'utf-8').trim();
 if (!input) {
   console.log(0);
 } else {
-  const lines = input.split('\\n');
+  const lines = input.replace(/\\n/g, '\n').split('\n');
   const count = parseInt(lines[0], 10);
   if (count === 0 || !lines[1]) {
     console.log(0);
   } else {
-    const numbers = lines[1].trim().split(/\\s+/).map(Number);
+    const numbers = lines[1].trim().split(/\s+/).map(Number);
     console.log(sumPositive(numbers));
   }
 }`,
@@ -181,7 +181,7 @@ public class Main {
     public static int sumPositive(int[] numbers) {
         // Buggy implementation: adds all numbers instead of only positive ones (> 0)
         int total = 0;
-        for (let i = 0; i < numbers.length; i++) {
+        for (int i = 0; i < numbers.length; i++) {
             total += numbers[i];
         }
         return total;
@@ -203,11 +203,50 @@ public class Main {
 }`
     },
     visibleTests: [
-      { id: 'tc-pos-1', stdin: '4\\n1 2 3 4\\n', expectedStdout: '10\\n' },
-      { id: 'tc-pos-2', stdin: '3\\n-1 5 2\\n', expectedStdout: '7\\n' }
+      { id: 'tc-pos-1', stdin: '4\n1 2 3 4\n', expectedStdout: '10\n' },
+      { id: 'tc-pos-2', stdin: '3\n-1 5 2\n', expectedStdout: '7\n' }
     ]
   }
 ];
+
+// Helper to format test case input cleanly for display in the Code Editor
+// (transforms raw multi-line competitive programming array stdin into clean arrays like [2, 5, 1, 9] without raw \n or /n)
+export function formatDisplayInput(stdin) {
+  if (stdin === null || stdin === undefined) return '';
+  if (typeof stdin !== 'string') return JSON.stringify(stdin);
+  const clean = stdin.replace(/\\n/g, '\n').replace(/\/n/g, '\n').trim();
+  
+  // Competitive programming format: count on line 0, elements on line 1: "4\n2 5 1 9"
+  const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 2) {
+    const count = parseInt(lines[0], 10);
+    const items = lines[1].split(/\s+/).filter(Boolean);
+    if (!isNaN(count) && (items.length === count || count > 0)) {
+      const nums = items.map(Number);
+      if (nums.every(n => !isNaN(n))) {
+        return `[${nums.join(', ')}]`;
+      }
+      return `[${items.join(', ')}]`;
+    }
+  } else if (lines.length === 1) {
+    const single = lines[0];
+    if (single === '0') return '[]';
+    if (single.startsWith('[') && single.endsWith(']')) return single;
+    const spaceItems = single.split(/\s+/).filter(Boolean);
+    if (spaceItems.length > 1 && spaceItems.every(x => !isNaN(Number(x)))) {
+      return `[${spaceItems.join(', ')}]`;
+    }
+    return JSON.stringify(single);
+  }
+  return clean;
+}
+
+// Helper to format test output cleanly without raw \n or /n
+export function formatDisplayOutput(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val !== 'string') return String(val);
+  return val.replace(/\\n/g, '\n').replace(/\/n/g, '\n').replace(/\r?\n$/, '').trim();
+}
 
 export default function PracticePage({
   currentUser,
@@ -273,7 +312,7 @@ export default function PracticePage({
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [customApiInput, setCustomApiInput] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('codedna_api_url') || '';
+      return localStorage.getItem('debugmate_api_url') || '';
     }
     return '';
   });
@@ -285,7 +324,14 @@ export default function PracticePage({
   // Helper to extract starter code
   const getStarterCode = (challengeObj, lang) => {
     if (!challengeObj?.starterCode) return '';
-    return challengeObj.starterCode[lang] || challengeObj.starterCode[lang === 'javascript' ? 'javascript' : 'java'] || '';
+    let code = challengeObj.starterCode[lang] || challengeObj.starterCode[lang === 'javascript' ? 'javascript' : 'java'] || '';
+    if (lang === 'javascript') {
+      code = code.replace(/input\.split\('\\\\n'\)/g, "input.replace(/\\\\n/g, '\\n').split('\\n')")
+                 .replace(/input\.split\('\/n'\)/g, "input.replace(/\\\\n/g, '\\n').split('\\n')");
+    } else if (lang === 'java') {
+      code = code.replace(/for\s*\(\s*let\s+i\s*=/g, 'for (int i =');
+    }
+    return code;
   };
 
   // Keep userCode in sync with codeCache
@@ -425,8 +471,10 @@ export default function PracticePage({
       fetchChallengesCatalog();
     };
 
-    window.addEventListener('codedna_api_changed', handleApiChanged);
-    return () => window.removeEventListener('codedna_api_changed', handleApiChanged);
+    window.addEventListener('debugmate_api_changed', handleApiChanged);
+    return () => {
+      window.removeEventListener('debugmate_api_changed', handleApiChanged);
+    };
   }, [checkBackendHealth, fetchChallengesCatalog, loadChallengeDetails, fetchEbyfQuestion, fetchRecommendation, fetchProgress, activeChallengeId, selectedLang]);
 
   // Switch challenge handler
@@ -1011,8 +1059,8 @@ export default function PracticePage({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {currentChallenge.visibleTests.map((vt, i) => (
                       <div key={i} style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', borderRadius: '6px', padding: '0.6rem 0.8rem', fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}>
-                        <div><strong>Input:</strong> <span style={{ color: '#94a3b8' }}>{JSON.stringify(vt.stdin)}</span></div>
-                        <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{JSON.stringify(vt.expectedStdout)}</span></div>
+                        <div><strong>Input:</strong> <span style={{ color: '#94a3b8' }}>{formatDisplayInput(vt.stdin)}</span></div>
+                        <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{formatDisplayOutput(vt.expectedStdout)}</span></div>
                       </div>
                     ))}
                   </div>
@@ -1269,7 +1317,7 @@ export default function PracticePage({
                             </div>
                             <div className="hidden-test-shield">
                               <Lock size={12} />
-                              <span>Hidden inputs & expected values are securely obfuscated per CodeDNA sandbox rules.</span>
+                              <span>Hidden inputs & expected values are securely obfuscated per DebugMate sandbox rules.</span>
                             </div>
                           </div>
                         );
@@ -1284,8 +1332,8 @@ export default function PracticePage({
                             {renderStatusBadge(t.status)}
                           </div>
                           <div className="test-details-grid">
-                            {t.expected !== undefined && <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{t.expected}</span></div>}
-                            {t.actual !== undefined && <div><strong>Actual:</strong> <span style={{ color: t.status === 'passed' ? '#a7f3d0' : '#fca5a5' }}>{t.actual || '(no stdout)'}</span></div>}
+                            {t.expected !== undefined && <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{formatDisplayOutput(t.expected)}</span></div>}
+                            {t.actual !== undefined && <div><strong>Actual:</strong> <span style={{ color: t.status === 'passed' ? '#a7f3d0' : '#fca5a5' }}>{formatDisplayOutput(t.actual) || '(no stdout)'}</span></div>}
                           </div>
                           {t.stderr && (
                             <div className="practice-terminal-error-box">
@@ -1420,7 +1468,7 @@ export default function PracticePage({
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.4rem', lineHeight: 1.45 }}>
                     {hasCompileError
                       ? 'The compiler encountered invalid syntax or unexpected tokens before execution. Fix the syntax defect below before analyzing algorithmic boundaries.'
-                      : (testResults?.feedback?.suggestion || 'CodeDNA identifies recurring structural patterns in failure traces to optimize deliberate practice.')}
+                      : (testResults?.feedback?.suggestion || 'DebugMate identifies recurring structural patterns in failure traces to optimize deliberate practice.')}
                   </p>
                   {(hasCompileError ? compileErrorText : testResults?.fingerprint?.evidence) && (
                     <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: hasCompileError ? '#fca5a5' : '#94a3b8', whiteSpace: 'pre-wrap' }}>
@@ -1600,7 +1648,7 @@ export default function PracticePage({
                 type="text"
                 value={customApiInput}
                 onChange={e => setCustomApiInput(e.target.value)}
-                placeholder="e.g. https://codedna-api.onrender.com"
+                placeholder="e.g. https://debugmate-api.onrender.com"
                 style={{
                   width: '100%',
                   padding: '0.55rem 0.85rem',
