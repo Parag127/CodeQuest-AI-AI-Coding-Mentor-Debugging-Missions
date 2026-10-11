@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, X, Check, ArrowRight, ShieldCheck, Mail, User } from 'lucide-react';
+import { getApiBase } from '../config/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
+const API_BASE = getApiBase();
 
 // Google 'G' 4-Color Official SVG Icon
 export function GoogleIcon({ size = 18 }) {

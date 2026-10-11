@@ -11,8 +11,9 @@ import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import LoginPage from './pages/LoginPage';
 import PracticePage from './pages/PracticePage';
+import { getApiBase } from './config/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
+const API_BASE = getApiBase();
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
@@ -124,9 +125,11 @@ export default function App() {
   const fetchHealthAndInfo = useCallback(async () => {
     setIsChecking(true);
     const startTime = performance.now();
+    const base = getApiBase();
     try {
-      const healthRes = await fetch(`${API_BASE}/api/health`);
-      if (healthRes.ok) {
+      const healthRes = await fetch(`${base}/api/health`);
+      const healthType = healthRes.headers.get('content-type') || '';
+      if (healthRes.ok && healthType.includes('application/json')) {
         const healthData = await healthRes.json();
         setHealth(healthData);
         const endTime = performance.now();
@@ -135,8 +138,9 @@ export default function App() {
         setHealth({ status: 'standby' });
       }
 
-      const infoRes = await fetch(`${API_BASE}/api/info`);
-      if (infoRes.ok) {
+      const infoRes = await fetch(`${base}/api/info`);
+      const infoType = infoRes.headers.get('content-type') || '';
+      if (infoRes.ok && infoType.includes('application/json')) {
         const infoData = await infoRes.json();
         setInfo(infoData);
       }

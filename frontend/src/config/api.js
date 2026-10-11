@@ -15,28 +15,45 @@ const STORAGE_KEY = 'codedna_api_url';
  * Returns the currently active backend API base URL (without trailing slash).
  */
 export function getApiBase() {
-  if (typeof window !== 'undefined') {
+  const isBrowser = typeof window !== 'undefined';
+  const isDeployed = isBrowser && 
+                     window.location.hostname !== 'localhost' && 
+                     window.location.hostname !== '127.0.0.1';
+
+  // 1. Check user-configured override from IDE settings modal
+  if (isBrowser) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored && stored.trim()) {
-        return stored.trim().replace(/\/+$/, '');
+        const cleanStored = stored.trim().replace(/\/+$/, '');
+        // If deployed to production, ignore stored localhost URLs to prevent mixed content errors
+        if (!(isDeployed && (cleanStored.includes('localhost') || cleanStored.includes('127.0.0.1')))) {
+          return cleanStored;
+        }
       }
     } catch {
       // Storage access blocked or restricted
     }
   }
 
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-    return envUrl.trim().replace(/\/+$/, '');
-  }
+  // 2. Check build-time or runtime environment variable
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 
-  // When deployed under HTTPS (e.g. Vercel production), relative root routes to /api
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+  // 3. When deployed on Vercel or cloud domain (non-localhost):
+  if (isDeployed) {
+    // If VITE_API_URL is an external production URL (e.g. Render, Railway), use it
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+      return envUrl;
+    }
+    // Otherwise, use relative same-origin root (/api/* on Vercel)
     return '';
   }
 
-  // Local development default
+  // 4. Local development: use envUrl if provided, otherwise default to port 5000
+  if (envUrl) {
+    return envUrl;
+  }
+
   return 'http://localhost:5000';
 }
 

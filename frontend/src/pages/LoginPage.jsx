@@ -23,8 +23,9 @@ import {
   Cpu
 } from 'lucide-react';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import { getApiBase } from '../config/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
+const API_BASE = getApiBase();
 
 export default function LoginPage({ 
   onLoginSuccess, 
@@ -105,11 +106,17 @@ export default function LoginPage({
         ? { email: email.trim(), password: password.trim(), role: selectedRole }
         : { name: name.trim(), email: email.trim(), password: password.trim(), role: selectedRole };
 
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const base = getApiBase();
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
+      }
 
       const data = await res.json();
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, Code2, ShieldCheck, Terminal, Award } from 'lucide-react';
+import { getApiBase } from '../config/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
+const API_BASE = getApiBase();
 
 const DEFAULT_MISSIONS = [
   {
@@ -36,8 +37,10 @@ export default function MissionsSection({ onLaunchMission }) {
   useEffect(() => {
     async function loadMissions() {
       try {
-        const res = await fetch(`${API_BASE}/api/challenges`);
-        if (res.ok) {
+        const base = getApiBase();
+        const res = await fetch(`${base}/api/challenges`);
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           const json = await res.json();
           const items = json.challenges || json.data || [];
           if (Array.isArray(items) && items.length > 0) {

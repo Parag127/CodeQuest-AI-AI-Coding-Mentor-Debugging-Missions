@@ -623,7 +623,7 @@ export default function PracticePage({
     setActiveFeedbackTab('tests');
 
     try {
-      const res = await fetch(`${API_BASE}/api/submissions`, {
+      const { res, ok, data, error, isHtml } = await safeApiFetch('/api/submissions', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -638,12 +638,17 @@ export default function PracticePage({
         })
       });
 
-      const data = await res.json();
+      if (isHtml) {
+        setApiError('Unable to reach backend execution runner: The endpoint returned HTML (SPA fallback) instead of JSON. Click "API Settings" in the header to verify your backend target URL or deployment.');
+        setApiConnectionStatus('disconnected');
+        return;
+      }
 
-      if (res.ok) {
+      if (ok && data) {
         const payload = data.data || data;
         setTestResults(payload);
         setLastSubmissionId(payload.submissionId);
+        setApiConnectionStatus('connected');
 
         // Refresh learner telemetry and adaptive recommendation
         fetchProgress();
@@ -653,12 +658,13 @@ export default function PracticePage({
           fetchEbyfQuestion(activeChallengeId, payload.submissionId);
         }
       } else {
-        const errMsg = data.error?.message || data.error || 'Submission failed. Please check your runner service.';
+        const errMsg = data?.error?.message || data?.error || error || 'Submission failed. Please check your runner service.';
         setApiError(errMsg);
       }
     } catch (err) {
       console.error('[PracticePage] Submission error:', err);
-      setApiError('Unable to reach backend execution runner. Confirm that backend is listening on port 5000.');
+      setApiError(`Unable to reach backend execution runner at ${activeApiBase || 'current domain'}. Click "API Settings" in the header to check or change your API target.`);
+      setApiConnectionStatus('disconnected');
     } finally {
       setIsSubmitting(false);
     }
@@ -677,7 +683,7 @@ export default function PracticePage({
     setApiError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/explain-before-fix`, {
+      const { ok, data, error, isHtml } = await safeApiFetch('/api/explain-before-fix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -692,12 +698,16 @@ export default function PracticePage({
         })
       });
 
-      const json = await res.json();
-      if (res.ok && json.data) {
-        setEbyfFeedback(json.data);
+      if (isHtml) {
+        setApiError('Explanation service returned HTML instead of JSON. Ensure backend API routes are active.');
+        return;
+      }
+
+      if (ok && data && (data.data || data.evaluation)) {
+        setEbyfFeedback(data.data || data);
         setActiveFeedbackTab('ebyf');
       } else {
-        setApiError(json.error || 'Unable to evaluate reflection at this time.');
+        setApiError(data?.error || error || 'Unable to evaluate reflection at this time.');
       }
     } catch (err) {
       console.warn('[PracticePage] EBYF submission error:', err);
@@ -713,7 +723,7 @@ export default function PracticePage({
     setApiError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/hints`, {
+      const { ok, data, error, isHtml } = await safeApiFetch('/api/hints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -726,9 +736,13 @@ export default function PracticePage({
         })
       });
 
-      const json = await res.json();
-      if (res.ok) {
-        const hintData = json.data || json;
+      if (isHtml) {
+        setApiError('Hint service returned HTML instead of JSON. Ensure backend API is active.');
+        return;
+      }
+
+      if (ok && data) {
+        const hintData = data.data || data;
         setUnlockedHints(prev => ({
           ...prev,
           [level]: {
@@ -738,7 +752,7 @@ export default function PracticePage({
         }));
         setActiveFeedbackTab('hints');
       } else {
-        setApiError(json.error || `Failed to unlock Level ${level} hint.`);
+        setApiError(data?.error || error || `Failed to unlock Level ${level} hint.`);
       }
     } catch (err) {
       setApiError(`Hint service error: ensure backend API is running.`);
@@ -892,6 +906,21 @@ export default function PracticePage({
             </span>
           </button>
 
+          {/* API Backend Status & Settings */}
+          <button 
+            className="practice-api-status-btn"
+            onClick={() => {
+              setIsApiModalOpen(true);
+              setTestResult(null);
+            }}
+            title={`Backend: ${activeApiBase || 'Vercel Serverless'} (${apiConnectionStatus}) — Click to configure`}
+          >
+            <span className={`practice-api-dot ${apiConnectionStatus}`}></span>
+            <span>
+              {apiConnectionStatus === 'connected' ? 'API' : apiConnectionStatus === 'checking' ? 'Checking' : 'API Offline'}
+            </span>
+          </button>
+
           {/* Theme Toggle */}
           <button 
             className="theme-toggle-btn" 
@@ -911,13 +940,25 @@ export default function PracticePage({
             <AlertCircle size={16} color="#ef4444" />
             <span style={{ fontSize: '0.82rem', color: '#fca5a5' }}>{apiError}</span>
           </div>
-          <button 
-            onClick={() => setApiError(null)}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
-          >
-            Dismiss
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => {
+                setIsApiModalOpen(true);
+                setTestResult(null);
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+            >
+              Configure API
+            </button>
+            <button 
+              onClick={() => setApiError(null)}
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
@@ -1464,6 +1505,159 @@ export default function PracticePage({
           </div>
         </section>
       </div>
+
+      {/* Backend API Configuration & Status Modal */}
+      {isApiModalOpen && (
+        <div className="practice-modal-overlay" onClick={() => setIsApiModalOpen(false)}>
+          <div className="practice-modal-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Server size={18} color="var(--brand-light)" />
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Backend API Connection
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsApiModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Live Health Status Banner */}
+            <div style={{ 
+              padding: '0.75rem 1rem', 
+              borderRadius: '8px', 
+              background: apiConnectionStatus === 'connected' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              border: `1px solid ${apiConnectionStatus === 'connected' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ 
+                  width: '9px', 
+                  height: '9px', 
+                  borderRadius: '50%', 
+                  background: apiConnectionStatus === 'connected' ? '#22c55e' : '#ef4444',
+                  boxShadow: `0 0 10px ${apiConnectionStatus === 'connected' ? '#22c55e' : '#ef4444'}`,
+                  display: 'inline-block' 
+                }} />
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: apiConnectionStatus === 'connected' ? '#22c55e' : '#ef4444' }}>
+                    {apiConnectionStatus === 'connected' ? `Operational ${apiLatency ? `(${apiLatency}ms)` : ''}` : 'Backend Unreachable'}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    {apiConnectionStatus === 'connected' ? 'Ready to execute code and test suites' : 'Check deployment or customize API endpoint'}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={async () => {
+                  setIsTestingApi(true);
+                  setTestResult(null);
+                  const res = await checkBackendHealth(customApiInput);
+                  setIsTestingApi(false);
+                  setTestResult(res);
+                }}
+                disabled={isTestingApi}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}
+              >
+                {isTestingApi ? <RefreshCw size={12} className="spin" /> : 'Ping'}
+              </button>
+            </div>
+
+            {/* Currently Active Endpoint */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
+                Active Endpoint Target
+              </label>
+              <div style={{ 
+                padding: '0.55rem 0.85rem', 
+                borderRadius: '6px', 
+                background: 'var(--bg-glass)', 
+                border: '1px solid var(--border-primary)',
+                fontSize: '0.82rem',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--brand-light)',
+                wordBreak: 'break-all'
+              }}>
+                {activeApiBase || '(Relative root /api — Vercel Serverless Function)'}
+              </div>
+            </div>
+
+            {/* Custom Backend URL Input */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                Custom Backend URL (Render, Railway, or EC2)
+              </label>
+              <input 
+                type="text"
+                value={customApiInput}
+                onChange={e => setCustomApiInput(e.target.value)}
+                placeholder="e.g. https://codedna-api.onrender.com"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.85rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-secondary)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.82rem',
+                  fontFamily: 'var(--font-mono)',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.4rem 0 0 0', lineHeight: 1.4 }}>
+                💡 Saved in your browser's localStorage. Allows instant connection without requiring a full redeployment.
+              </p>
+            </div>
+
+            {testResult && (
+              <div style={{ 
+                padding: '0.65rem 0.85rem', 
+                borderRadius: '6px', 
+                fontSize: '0.78rem',
+                marginBottom: '1.25rem',
+                background: testResult.ok ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${testResult.ok ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                color: testResult.ok ? '#22c55e' : '#ef4444'
+              }}>
+                {testResult.ok ? `✓ Connection verified! Roundtrip latency: ${testResult.latencyMs}ms` : `✕ ${testResult.error}`}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--border-primary)' }}>
+              <button 
+                onClick={() => {
+                  resetCustomApiBase();
+                  setCustomApiInput('');
+                  setTestResult(null);
+                  setIsApiModalOpen(false);
+                }}
+                className="btn btn-secondary btn-sm"
+              >
+                Reset to Auto
+              </button>
+              <button 
+                onClick={() => {
+                  setCustomApiBase(customApiInput);
+                  setIsApiModalOpen(false);
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Save & Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

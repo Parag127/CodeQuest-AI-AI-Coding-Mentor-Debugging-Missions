@@ -86,19 +86,6 @@ public static int[] findTargetPair(int[] arr, int target) {
                 <ArrowRight size={18} />
               </button>
             </div>
-
-            {/* Social Trust Proof */}
-            <div className="hero-trust-bar">
-              <div className="trust-avatars">
-                <div className="trust-avatar">DM</div>
-                <div className="trust-avatar">JS</div>
-                <div className="trust-avatar">JV</div>
-                <div className="trust-avatar">CS</div>
-              </div>
-              <p className="trust-text">
-                Proven deliberate practice pipeline for <span className="trust-highlight">1,250+ Engineers</span> & student developers.
-              </p>
-            </div>
           </div>
 
           {/* Right Visual Side: Interactive IDE Frame + Floating AI Tooltip */}
