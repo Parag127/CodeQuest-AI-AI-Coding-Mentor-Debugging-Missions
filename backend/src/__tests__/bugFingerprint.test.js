@@ -1,7 +1,8 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import db from '../db/index.js';
+import { initDb } from '../db/init.js';
 import {
   classifyBugFingerprint,
   classifyBugFingerprints,
@@ -10,6 +11,8 @@ import {
   FINGERPRINT_CATEGORIES,
   BUG_PATTERNS
 } from '../services/bugFingerprint.js';
+
+initDb();
 
 describe('Deterministic Bug Fingerprint Classifier', () => {
   describe('1. Category: loop_boundary', () => {
