@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,6 +16,9 @@ import recommendationsRouter from './routes/recommendations.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -79,32 +83,52 @@ let hackathonItems = [
   { id: 3, title: 'Configure AI Hint Pipeline', category: 'AI', status: 'In Progress', timestamp: new Date().toISOString() }
 ];
 
-// Root endpoint
+// Locate production frontend build if available
+const staticDistPath = [
+  path.resolve(__dirname, '../../frontend/dist'),
+  path.resolve(process.cwd(), '../frontend/dist'),
+  path.resolve(process.cwd(), 'frontend/dist'),
+  path.resolve(process.cwd(), 'dist')
+].find(p => {
+  try { return fs.existsSync(path.join(p, 'index.html')); } catch { return false; }
+});
+
+const apiCatalog = {
+  name: 'CodeDNA API',
+  status: 'Running',
+  version: '1.0.0',
+  endpoints: [
+    { path: '/api/health', method: 'GET', description: 'System health and metrics' },
+    { path: '/api/info', method: 'GET', description: 'Runtime and container environment info' },
+    { path: '/api/challenges', method: 'GET', description: 'List all programming challenges' },
+    { path: '/api/challenges/:id', method: 'GET', description: 'Get challenge details and public test cases' },
+    { path: '/api/submissions', method: 'POST', description: 'Submit code execution' },
+    { path: '/api/hints', method: 'POST', description: 'Request progressive hint' },
+    { path: '/api/items', method: 'GET', description: 'Fetch all sprint items' },
+    { path: '/api/items', method: 'POST', description: 'Create sprint item' },
+    { path: '/api/items/:id', method: 'DELETE', description: 'Delete sprint item' },
+    { path: '/api/auth/login', method: 'POST', description: 'Authenticate user session' },
+    { path: '/api/auth/register', method: 'POST', description: 'Register new user account' },
+    { path: '/api/ai/health', method: 'GET', description: 'Gemini AI service health check' },
+    { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
+    { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
+    { path: '/api/explain-before-fix', method: 'POST', description: 'Learner reflection before fixing bug' },
+    { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' },
+    { path: '/api/recommendations/:learnerId', method: 'GET', description: 'Adaptive challenge recommendation' }
+  ]
+};
+
+// Root endpoint: in production / browser, serve frontend React SPA; otherwise return API catalog JSON
 app.get('/', (req, res) => {
-  res.json({
-    name: 'CodeDNA API',
-    status: 'Running',
-    version: '1.0.0',
-    endpoints: [
-      { path: '/api/health', method: 'GET', description: 'System health and metrics' },
-      { path: '/api/info', method: 'GET', description: 'Runtime and container environment info' },
-      { path: '/api/challenges', method: 'GET', description: 'List all programming challenges' },
-      { path: '/api/challenges/:id', method: 'GET', description: 'Get challenge details and public test cases' },
-      { path: '/api/submissions', method: 'POST', description: 'Submit code execution' },
-      { path: '/api/hints', method: 'POST', description: 'Request progressive hint' },
-      { path: '/api/items', method: 'GET', description: 'Fetch all sprint items' },
-      { path: '/api/items', method: 'POST', description: 'Create sprint item' },
-      { path: '/api/items/:id', method: 'DELETE', description: 'Delete sprint item' },
-      { path: '/api/auth/login', method: 'POST', description: 'Authenticate user session' },
-      { path: '/api/auth/register', method: 'POST', description: 'Register new user account' },
-      { path: '/api/ai/health', method: 'GET', description: 'Gemini AI service health check' },
-      { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
-      { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
-      { path: '/api/explain-before-fix', method: 'POST', description: 'Learner reflection before fixing bug' },
-      { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' },
-      { path: '/api/recommendations/:learnerId', method: 'GET', description: 'Adaptive challenge recommendation' }
-    ]
-  });
+  if (staticDistPath && req.accepts('html') && !req.xhr) {
+    return res.sendFile(path.join(staticDistPath, 'index.html'));
+  }
+  res.json(apiCatalog);
+});
+
+// Explicit API catalog endpoint
+app.get('/api', (req, res) => {
+  res.json(apiCatalog);
 });
 
 // Authentication endpoints
@@ -253,6 +277,17 @@ app.use('/api/ai', aiRouter);
 app.use('/api/explain-before-fix', ebyfRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/recommendations', recommendationsRouter);
+
+// Serve static client assets and SPA routing fallback in production/standalone deployments
+if (staticDistPath) {
+  app.use(express.static(staticDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(staticDistPath, 'index.html'));
+  });
+}
 
 // 404 handler
 app.use(notFoundHandler);

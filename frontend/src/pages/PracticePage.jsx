@@ -440,29 +440,135 @@ export default function PracticePage({
     }
   };
 
-  // Handle Tab key in Code Editor (insert 2 spaces instead of losing focus!)
+  // Handle Keyboard Navigation & Smart Auto-Indentation in Code Editor
   const handleKeyDown = (e) => {
-    if (e.key === 'Tab') {
+    // 1. Ctrl+Enter or Cmd+Enter to execute tests / submit
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      const textarea = textareaRef.current;
-      if (!textarea) return;
+      handleSubmitCode();
+      return;
+    }
 
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // 2. Auto-indentation when pressing Enter
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const val = userCode;
 
-      const updated = val.substring(0, start) + '  ' + val.substring(end);
-      handleCodeChange(updated);
+      // Extract current line up to the cursor
+      const lineUpToCursor = val.substring(0, start).split('\n').pop() || '';
+      const indentMatch = lineUpToCursor.match(/^([ \t]*)/);
+      let indent = indentMatch ? indentMatch[1] : '';
 
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      }, 0);
+      // Check if line before cursor ends with an opening brace/bracket/colon
+      const trimmedLine = lineUpToCursor.trim();
+      const opensBlock = /[\{\[\(:]$/.test(trimmedLine);
+      if (opensBlock) {
+        indent += '  '; // Indent by 2 spaces for the new block
+      }
+
+      // Check if next character right after cursor is a closing brace/bracket/parenthesis
+      const nextChar = val.charAt(start);
+      const isBraceSplit = opensBlock && (
+        (trimmedLine.endsWith('{') && nextChar === '}') ||
+        (trimmedLine.endsWith('[') && nextChar === ']') ||
+        (trimmedLine.endsWith('(') && nextChar === ')')
+      );
+
+      if (isBraceSplit) {
+        // Expand {|} to:
+        // {
+        //   |
+        // }
+        const prevIndent = indentMatch ? indentMatch[1] : '';
+        const insertText = '\n' + indent + '\n' + prevIndent;
+        const updated = val.substring(0, start) + insertText + val.substring(end);
+        handleCodeChange(updated);
+        const cursorPosition = start + 1 + indent.length;
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = cursorPosition;
+        }, 0);
+      } else {
+        const insertText = '\n' + indent;
+        const updated = val.substring(0, start) + insertText + val.substring(end);
+        handleCodeChange(updated);
+        const cursorPosition = start + insertText.length;
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = cursorPosition;
+        }, 0);
+      }
+      return;
     }
 
-    // Ctrl+Enter or Cmd+Enter to execute tests!
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    // 3. Tab key: Indent with 2 spaces (multi-line support for Tab and Shift+Tab)
+    if (e.key === 'Tab') {
       e.preventDefault();
-      handleSubmitCode();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = userCode;
+
+      if (start === end) {
+        // Single cursor: insert 2 spaces
+        const updated = val.substring(0, start) + '  ' + val.substring(end);
+        handleCodeChange(updated);
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 2;
+        }, 0);
+      } else {
+        // Multi-line selection: indent or un-indent entire blocks
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = val.indexOf('\n', end);
+        const endPos = lineEnd === -1 ? val.length : lineEnd;
+        const selectedText = val.substring(lineStart, endPos);
+
+        if (e.shiftKey) {
+          // Shift+Tab: Remove up to 2 leading spaces
+          const lines = selectedText.split('\n').map(l => l.replace(/^ {1,2}/, ''));
+          const replacement = lines.join('\n');
+          const updated = val.substring(0, lineStart) + replacement + val.substring(endPos);
+          handleCodeChange(updated);
+          setTimeout(() => {
+            textarea.selectionStart = lineStart;
+            textarea.selectionEnd = lineStart + replacement.length;
+          }, 0);
+        } else {
+          // Tab: Add 2 leading spaces to each line
+          const lines = selectedText.split('\n').map(l => '  ' + l);
+          const replacement = lines.join('\n');
+          const updated = val.substring(0, lineStart) + replacement + val.substring(endPos);
+          handleCodeChange(updated);
+          setTimeout(() => {
+            textarea.selectionStart = lineStart;
+            textarea.selectionEnd = lineStart + replacement.length;
+          }, 0);
+        }
+      }
+      return;
+    }
+
+    // 4. Backspace: If right after an even indentation (e.g., 2 spaces), delete the 2-space tab cleanly
+    if (e.key === 'Backspace' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start === end && start >= 2) {
+        const val = userCode;
+        const char1 = val.charAt(start - 1);
+        const char2 = val.charAt(start - 2);
+        const lineUpToCursor = val.substring(0, start).split('\n').pop() || '';
+        // If the line up to cursor consists only of spaces and ends with '  '
+        if (char1 === ' ' && char2 === ' ' && /^\s+$/.test(lineUpToCursor)) {
+          e.preventDefault();
+          const updated = val.substring(0, start - 2) + val.substring(start);
+          handleCodeChange(updated);
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start - 2;
+          }, 0);
+        }
+      }
     }
   };
 

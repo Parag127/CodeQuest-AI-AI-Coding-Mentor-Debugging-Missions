@@ -156,9 +156,15 @@ npm run dev
         ├── App.jsx           # Main UI dashboard
         ├── main.jsx          # React DOM entrypoint
         ├── index.css         # Dark-mode glassmorphic styling
+        ├── pages/
+        │   ├── PracticePage.jsx # Dedicated IDE & debugging sandbox
+        │   └── LoginPage.jsx    # Authentication & telemetry profile
         └── components/
-            ├── Header.jsx
-            ├── DockerStatusCard.jsx
-            ├── ApiTester.jsx
+            ├── Navbar.jsx
+            ├── HeroSection.jsx
+            ├── MissionsSection.jsx
+            ├── ShowcaseBrowser.jsx
+            ├── InteractiveJourney.jsx
+            ├── BentoGrid.jsx
             └── DockerGuideCard.jsx
 ```
