@@ -16,7 +16,7 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "test:backend": "npm test --prefix backend",
     "test": "npm test --prefix backend",
-    "build": "npm install --prefix frontend && npm run build --prefix frontend"
+    "build": "cd frontend && npm install --include=dev && npx vite build"
   },
   "keywords": [
     "docker",
@@ -28,6 +28,10 @@
   ],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.11"
+  },
   "devDependencies": {
     "concurrently": "^10.0.6"
   }
