@@ -1,5 +1,8 @@
 import express from 'express';
+import db from '../db/index.js';
 import { geminiService } from '../services/geminiService.js';
+import { store } from '../data/store.js';
+import { getChallengeById } from '../data/seedChallenges.js';
 
 const router = express.Router();
 
@@ -50,7 +53,9 @@ router.get('/health', async (req, res) => {
  * POST /api/ai/feedback
  * Generates pedagogical diagnostic feedback after a learner submits code.
  *
- * Request Body:
+ * Accepts either:
+ * 1. { submissionId: string } -> looks up submission & public test results from DB/store
+ * 2. Full direct payload:
  * {
  *   code: string,
  *   language: 'java' | 'javascript',
@@ -67,13 +72,83 @@ router.get('/health', async (req, res) => {
  */
 router.post('/feedback', async (req, res) => {
   try {
-    const {
+    let {
+      submissionId,
       code,
       language,
       challengeTitle,
       challengeDescription,
       executionResults
-    } = req.body;
+    } = req.body || {};
+
+    // 0. Resolve from submissionId if provided
+    if (submissionId && (!code || !executionResults)) {
+      const activeSubId = String(submissionId).trim();
+      let dbSub = null;
+      let dbChallenge = null;
+      let dbPublicTests = [];
+
+      try {
+        dbSub = db.prepare('SELECT * FROM submissions WHERE id = ?').get(activeSubId);
+        if (dbSub) {
+          dbChallenge = db.prepare('SELECT * FROM challenges WHERE id = ?').get(dbSub.challenge_id);
+          dbPublicTests = db.prepare(`
+            SELECT test_case_id as testCaseId, status, is_public as isPublic, stdout, stderr
+            FROM test_results
+            WHERE submission_id = ? AND is_public = 1
+          `).all(activeSubId);
+        }
+      } catch (err) {
+        // Non-fatal; will check in-memory store
+      }
+
+      if (!dbSub) {
+        const storeSub = store.getSubmission(activeSubId);
+        if (storeSub) {
+          code = code || storeSub.code;
+          language = language || storeSub.language;
+          const seedChallenge = getChallengeById(storeSub.challengeId);
+          challengeTitle = challengeTitle || seedChallenge?.title || 'Coding Challenge';
+          challengeDescription = challengeDescription || seedChallenge?.description || 'Solve the challenge.';
+          executionResults = executionResults || {
+            status: storeSub.status || 'failed',
+            passCount: storeSub.passCount || 0,
+            failCount: storeSub.failCount || 1,
+            totalTests: storeSub.totalTests || (storeSub.testResults?.length || 1),
+            testResults: (storeSub.testResults || []).filter(t => t.isPublic !== false)
+          };
+        } else {
+          return res.status(404).json({
+            success: false,
+            error: `Submission '${submissionId}' not found`
+          });
+        }
+      } else {
+        code = code || dbSub.code;
+        language = language || dbSub.language;
+        challengeTitle = challengeTitle || dbChallenge?.title || 'Coding Challenge';
+        challengeDescription = challengeDescription || dbChallenge?.description || 'Solve the challenge.';
+
+        const passCount = dbSub.pass_count ?? 0;
+        const failCount = dbSub.fail_count ?? 0;
+        const totalTests = passCount + failCount;
+        const status = dbSub.status === 'passed' ? 'passed' : 'wrong_output';
+
+        executionResults = executionResults || {
+          status,
+          passCount,
+          failCount,
+          totalTests,
+          testResults: dbPublicTests.map(tr => ({
+            testCaseId: tr.testCaseId,
+            isPublic: true,
+            status: tr.status,
+            stdout: tr.stdout,
+            stderr: tr.stderr
+          }))
+        };
+      }
+    }
 
     // 1. Validate code
     if (!code || typeof code !== 'string' || code.trim() === '') {

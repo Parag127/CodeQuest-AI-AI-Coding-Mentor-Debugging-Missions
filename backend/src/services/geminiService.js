@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-1.5-flash';
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 export const DEFAULT_TIMEOUT_MS = 10000;
 
 const SYSTEM_INSTRUCTION = `You are a patient, beginner-friendly programming tutor for CodeDNA.
