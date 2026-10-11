@@ -6,12 +6,19 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test": "node --test",
+    "db:init": "node src/db/init.js"
   },
-  "keywords": ["express", "docker", "hackathon"],
+  "keywords": [
+    "express",
+    "docker",
+    "hackathon"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2"

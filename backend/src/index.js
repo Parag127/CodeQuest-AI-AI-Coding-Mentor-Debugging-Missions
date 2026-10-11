@@ -2,58 +2,65 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import os from 'os';
+import { initDb } from './db/init.js';
+import challengesRouter from './routes/challenges.js';
+import submissionsRouter from './routes/submissions.js';
+import hintsRouter from './routes/hints.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for frontend clients
+// Initialize Database schema and seed data on startup
+try {
+  initDb();
+} catch (err) {
+  console.error('[DB] Fatal error initializing database:', err);
+  process.exit(1);
+}
+
+// Allowed CORS origins
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'];
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow non-browser requests or matching origins
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Learner-Id']
 }));
 
-app.use(express.json());
-
-// In-memory demo data store for hackathon starter
-let hackathonItems = [
-  { id: 1, title: 'Dockerize Backend Service', category: 'DevOps', status: 'Completed', timestamp: new Date().toISOString() },
-  { id: 2, title: 'Dockerize Frontend Client', category: 'DevOps', status: 'Completed', timestamp: new Date().toISOString() },
-  { id: 3, title: 'Configure Docker Compose Orchestration', category: 'Infrastructure', status: 'Completed', timestamp: new Date().toISOString() },
-  { id: 4, title: 'Build Hackathon Feature Prototype', category: 'Product', status: 'In Progress', timestamp: new Date().toISOString() }
-];
+// Body parser with 100kb limit as required by API contract
+app.use(express.json({ limit: '100kb' }));
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    name: 'Hackathon Starter API',
+    name: 'CodeDNA API',
     status: 'Running',
     version: '1.0.0',
     endpoints: [
       { path: '/api/health', method: 'GET', description: 'System health and metrics' },
       { path: '/api/info', method: 'GET', description: 'Runtime and container environment info' },
-      { path: '/api/items', method: 'GET', description: 'Fetch all demo items' },
-      { path: '/api/items', method: 'POST', description: 'Create a new demo item' },
-      { path: '/api/items/:id', method: 'DELETE', description: 'Delete item by id' }
+      { path: '/api/challenges', method: 'GET', description: 'List all programming challenges' },
+      { path: '/api/challenges/:id', method: 'GET', description: 'Get challenge details and public test cases' }
     ]
   });
 });
 
-// Health check endpoint (Used by Docker Compose healthcheck and frontend monitor)
+// Health check endpoint (Adheres to API_CONTRACT.md)
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptimeSeconds: Math.floor(process.uptime()),
-    environment: process.env.NODE_ENV || 'development',
-    isDocker: process.env.IS_DOCKER === 'true' || Boolean(process.env.DOCKER_CONTAINER),
-    memoryUsageMB: {
-      rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
-      heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
-    }
+    status: 'ok',
+    service: 'codedna-api'
   });
 });
 
@@ -72,44 +79,10 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-// Demo Items CRUD API
-app.get('/api/items', (req, res) => {
-  res.json({
-    success: true,
-    count: hackathonItems.length,
-    data: hackathonItems
-  });
-});
-
-app.post('/api/items', (req, res) => {
-  const { title, category, status } = req.body;
-  if (!title) {
-    return res.status(400).json({ success: false, error: 'Title is required' });
-  }
-
-  const newItem = {
-    id: Date.now(),
-    title: String(title).trim(),
-    category: category ? String(category).trim() : 'General',
-    status: status ? String(status).trim() : 'Pending',
-    timestamp: new Date().toISOString()
-  };
-
-  hackathonItems.unshift(newItem);
-  res.status(201).json({ success: true, data: newItem });
-});
-
-app.delete('/api/items/:id', (req, res) => {
-  const itemId = Number(req.params.id);
-  const initialLength = hackathonItems.length;
-  hackathonItems = hackathonItems.filter(item => item.id !== itemId);
-
-  if (hackathonItems.length === initialLength) {
-    return res.status(404).json({ success: false, error: 'Item not found' });
-  }
-
-  res.json({ success: true, message: `Item ${itemId} deleted successfully` });
-});
+// CodeDNA Routes
+app.use('/api/challenges', challengesRouter);
+app.use('/api/submissions', submissionsRouter);
+app.use('/api/hints', hintsRouter);
 
 // 404 handler
 app.use((req, res) => {
@@ -123,6 +96,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Backend API running on port ${PORT}`);
+  console.log(`🚀 CodeDNA Backend API running on port ${PORT}`);
   console.log(`🌐 Health check available at http://localhost:${PORT}/api/health`);
+  console.log(`📚 Challenges endpoint available at http://localhost:${PORT}/api/challenges`);
 });

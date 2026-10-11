@@ -11,9 +11,12 @@ ENV NODE_ENV=production
 ENV IS_DOCKER=true
 ENV PORT=5000
 
-# Install dependencies with caching layer
+# Install build tools for native addons like better-sqlite3
+RUN apk add --no-cache python3 make g++
+
+# Install dependencies with caching layer (scripts must execute for native addon compilation)
 COPY package.json ./
-RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy application source code
 COPY src/ ./src/

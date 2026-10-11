@@ -25,3 +25,10 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+backend/data/
+
