@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Terminal, Copy, Check, Server, Globe, ShieldCheck } from 'lucide-react';
+import { Terminal, Copy, Check, Server, Globe, ShieldCheck, Box } from 'lucide-react';
 
 export default function DockerGuideCard() {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
   const commands = [
-    { label: 'Start Stack (Production / Compose)', cmd: 'docker compose up --build -d' },
-    { label: 'Start Stack (Dev Mode with Live Reload)', cmd: 'docker compose -f docker-compose.dev.yml up --build' },
-    { label: 'View Realtime Container Logs', cmd: 'docker compose logs -f' },
-    { label: 'Stop and Clean Containers', cmd: 'docker compose down' }
+    { label: 'Production Compose Up (Detached)', cmd: 'docker compose up --build -d' },
+    { label: 'Development Live Reload (Hot HMR)', cmd: 'docker compose -f docker-compose.dev.yml up --build' },
+    { label: 'Real-time Container Logs Stream', cmd: 'docker compose logs -f' },
+    { label: 'Tear Down & Purge Bridge Network', cmd: 'docker compose down' }
   ];
 
   const handleCopy = (text, index) => {
@@ -18,70 +18,89 @@ export default function DockerGuideCard() {
   };
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <div className="card-title-group">
-          <div className="card-icon" style={{ color: '#c084fc' }}>
-            <Terminal size={20} />
-          </div>
-          <div>
-            <h3>Docker Architecture & Commands</h3>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Multi-container orchestration setup
-            </span>
-          </div>
+    <section className="container" style={{ padding: '60px 1.5rem 30px' }}>
+      <div className="section-header">
+        <div className="section-badge">
+          <Terminal size={14} />
+          <span>Quickstart & CLI Reference</span>
         </div>
+        <h2 className="section-title">
+          Orchestration Command Center
+        </h2>
+        <p className="section-subtitle">
+          Launch and manage the multi-container stack in seconds using Docker Desktop and Compose.
+        </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#818cf8', marginBottom: '0.35rem' }}>
-            <Globe size={16} />
-            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Frontend Container</span>
+      <div className="bento-card" style={{ maxWidth: '960px', margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
+          <div style={{ background: 'var(--bg-glass)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa', marginBottom: '0.4rem' }}>
+              <Globe size={16} />
+              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Frontend Client</span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Port <strong>5173</strong> (Dev) &bull; Port <strong>3000</strong> (Nginx Prod)
+            </p>
           </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Vite / Nginx on port <strong>5173</strong> (or 80)
-          </p>
+
+          <div style={{ background: 'var(--bg-glass)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', marginBottom: '0.4rem' }}>
+              <Server size={16} />
+              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Express API</span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Port <strong>5000</strong> &bull; Health probe on <code>/api/health</code>
+            </p>
+          </div>
+
+          <div style={{ background: 'var(--bg-glass)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', marginBottom: '0.4rem' }}>
+              <ShieldCheck size={16} />
+              <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Docker Network</span>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Bridge network <code>hackathon-network</code>
+            </p>
+          </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', marginBottom: '0.35rem' }}>
-            <Server size={16} />
-            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Backend Container</span>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Node.js Express on port <strong>5000</strong>
-          </p>
-        </div>
-
-        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', marginBottom: '0.35rem' }}>
-            <ShieldCheck size={16} />
-            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Isolated Network</span>
-          </div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            Bridge network <code>hackathon-network</code>
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {commands.map((item, idx) => (
-          <div key={idx} className="code-container" style={{ margin: 0 }}>
-            <div className="code-header">
-              <span>{item.label}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {commands.map((item, idx) => (
+            <div 
+              key={idx} 
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.15rem', background: '#070a12', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)', fontFamily: 'var(--font-mono)' }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                  {item.label}
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#e2e8f0' }}>
+                  {item.cmd}
+                </span>
+              </div>
               <button 
                 onClick={() => handleCopy(item.cmd, idx)}
-                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem' }}
+                title="Copy command"
               >
-                {copiedIndex === idx ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
-                <span>{copiedIndex === idx ? 'Copied' : 'Copy'}</span>
+                {copiedIndex === idx ? (
+                  <>
+                    <Check size={13} color="#10b981" />
+                    <span style={{ color: '#10b981' }}>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy</span>
+                  </>
+                )}
               </button>
             </div>
-            <div className="code-content">{item.cmd}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

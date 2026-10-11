@@ -1,6 +1,6 @@
-# 🐳 D.Y. Patil Hackathon — Full-Stack Docker Starter
+# 🚀 CodeQuest AI & CodeDNA — AI Debugging Missions & Containerized Telemetry
 
-A production-ready, containerized full-stack application engineered for hackathons and rapid prototyping. Features an Express.js REST API backend, a Vite + React frontend with modern dark-mode UI, and complete Docker & Docker Compose orchestration.
+A production-grade, containerized full-stack application built for the **D.Y. Patil Hackathon 2026**. Features an Express.js REST API backend, a Vite + React frontend styled after **Skilotech's modern engineering platform** (floating island navbar, ambient mesh glows, interactive macOS IDE, and live browser console), and a complete **CodeDNA** debugging lab with Java/JS parity, progressive hints, and cognitive explanation gates.
 
 ---
 
@@ -8,8 +8,8 @@ A production-ready, containerized full-stack application engineered for hackatho
 
 ```mermaid
 graph TD
-    User([Browser Client]) -->|Port 3000 / 80| Frontend[Frontend Container<br/>Vite / Nginx SPA]
-    User -->|Port 5000| Backend[Backend Container<br/>Node.js 20 Express API]
+    User([Browser Client]) -->|Port 3000 / 80| Frontend[Frontend Container<br/>Vite / Nginx SPA<br/>Skilotech-Inspired UI]
+    User -->|Port 5000| Backend[Backend Container<br/>Node.js 20 Express API<br/>Health & Telemetry]
     Frontend -->|Reverse Proxy /api/*| Backend
     
     subgraph Docker Network: hackathon-network
@@ -22,7 +22,7 @@ graph TD
 
 | Service | Technology | Port (Host : Container) | Purpose |
 | :--- | :--- | :--- | :--- |
-| **`frontend`** | React 18 + Vite + Nginx | `3000:80` (Prod) / `5173:5173` (Dev) | Interactive UI & API Telemetry Dashboard |
+| **`frontend`** | React 18 + Vite + Nginx | `3000:80` (Prod) / `5173:5173` (Dev) | Skilotech-Inspired Debugging Sandbox & Telemetry Dashboard |
 | **`backend`** | Node.js 20 Alpine + Express | `5000:5000` | REST API, Health Probes & Demo CRUD Endpoints |
 
 ---
