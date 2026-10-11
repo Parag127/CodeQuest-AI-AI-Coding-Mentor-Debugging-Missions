@@ -557,7 +557,7 @@ export function buildSafeEbyfEvaluationFallback({
   }
 
   if (isLoopIssue) {
-    const strongKeywords = ['<=', 'one past', 'past the end', 'out of bounds', 'arr.length', 'array.length', 'length - 1', 'one extra', 'off by one', 'boundary', 'bounds', 'stopping condition', 'comparison', 'stops at'];
+    const strongKeywords = ['<=', 'one past', 'past the end', 'out of bounds', 'arr.length', 'array.length', 'length - 1', 'one extra', 'off by one', 'boundary', 'bounds', 'stopping condition', 'comparison', 'stops at', 'nan', 'undefined'];
     const partialKeywords = ['loop', 'index', 'length', 'condition', 'i', 'iteration', 'exceed', 'counter', 'size'];
 
     const hasStrong = strongKeywords.some(kw => text.includes(kw));

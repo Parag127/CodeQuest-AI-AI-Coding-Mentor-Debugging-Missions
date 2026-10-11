@@ -1,8 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'crypto';
+import db from '../db/index.js';
 import {
   classifyBugFingerprint,
   classifyBugFingerprints,
+  recordBugFingerprint,
+  getLearnerMistakes,
   FINGERPRINT_CATEGORIES,
   BUG_PATTERNS
 } from '../services/bugFingerprint.js';
@@ -389,6 +393,178 @@ describe('Deterministic Bug Fingerprint Classifier', () => {
       });
 
       assert.deepEqual(result, []);
+    });
+  });
+
+  describe('10. Confirmed vs Possible Mistakes Distinction', () => {
+    it('marks high-confidence patterns with isConfirmed: true', () => {
+      const result = classifyBugFingerprint({
+        code: 'for (let i = 0; i <= arr.length; i++) sum += arr[i];',
+        language: 'javascript',
+        testResults: [{ status: 'wrong_output', stdout: 'NaN', expected_output: '10' }]
+      });
+      assert.equal(result.isConfirmed, true);
+      assert.equal(result.confidence, 'high');
+      assert.equal(result.isHeuristic, false);
+    });
+
+    it('marks heuristic or partial patterns with isConfirmed: false', () => {
+      const result = classifyBugFingerprint({
+        code: 'for (let i = 0; i < arr.length - 1; i++) sum += arr[i];',
+        language: 'javascript',
+        testResults: [{ status: 'wrong_output', stdout: '9', expected_output: '10' }]
+      });
+      assert.equal(result.isConfirmed, false);
+      assert.equal(result.confidence, 'medium');
+      assert.equal(result.isHeuristic, true);
+    });
+  });
+
+  describe('11. Insufficient Evidence and Unknown Classifications', () => {
+    it('returns unknown classification when failure provides insufficient or ambiguous evidence', () => {
+      const result = classifyBugFingerprint({
+        code: 'function compute(data) { return data.map(x => x * 2); }',
+        language: 'javascript',
+        testResults: [
+          { status: 'wrong_output', stdout: 'apple', expected_output: 'orange' }
+        ]
+      });
+
+      assert.equal(result.category, FINGERPRINT_CATEGORIES.UNKNOWN);
+      assert.equal(result.confidence, 'low');
+      assert.equal(result.isConfirmed, false);
+      assert.match(result.reason, /no deterministic bug pattern/i);
+      assert.equal(result.evidence, null);
+    });
+
+    it('handles empty, null, or missing test result records gracefully', () => {
+      const resultEmpty = classifyBugFingerprint({ code: 'const x = 1;', testResults: [] });
+      assert.equal(resultEmpty.category, FINGERPRINT_CATEGORIES.UNKNOWN);
+      assert.equal(resultEmpty.confidence, 'low');
+      assert.equal(resultEmpty.isConfirmed, false);
+
+      const resultNull = classifyBugFingerprint({ code: null, testResults: null });
+      assert.equal(resultNull.category, FINGERPRINT_CATEGORIES.UNKNOWN);
+      assert.equal(resultNull.confidence, 'low');
+      assert.equal(resultNull.isConfirmed, false);
+
+      const resultDefault = classifyBugFingerprint();
+      assert.equal(resultDefault.category, FINGERPRINT_CATEGORIES.UNKNOWN);
+      assert.equal(resultDefault.confidence, 'low');
+      assert.equal(resultDefault.isConfirmed, false);
+    });
+  });
+
+  describe('12. SQLite Database Persistence and Learner Recurrence Tracking', () => {
+    const testLearnerId = `test-learner-${Date.now()}`;
+    const testChallengeId = 'largest-number';
+
+    it('persists bug fingerprints into SQLite database with confidence and evidence', () => {
+      const subId1 = crypto.randomUUID();
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, status)
+        VALUES (?, ?, ?, 'javascript', 'let x = 1;', 'failed')
+      `).run(subId1, testLearnerId, testChallengeId);
+
+      const recId1 = recordBugFingerprint(db, {
+        learnerId: testLearnerId,
+        challengeId: testChallengeId,
+        submissionId: subId1,
+        category: FINGERPRINT_CATEGORIES.LOOP_BOUNDARY,
+        language: 'javascript',
+        confidence: 'high',
+        evidence: 'Loop header contains <= length and NaN output observed',
+        isConfirmed: true
+      });
+
+      assert.ok(recId1);
+
+      // Verify row in SQLite
+      const row = db.prepare('SELECT * FROM bug_fingerprints WHERE id = ?').get(recId1);
+      assert.ok(row);
+      assert.equal(row.learner_id, testLearnerId);
+      assert.equal(row.challenge_id, testChallengeId);
+      assert.equal(row.submission_id, subId1);
+      assert.equal(row.pattern_key, 'loop_boundary');
+      assert.equal(row.confidence, 'high');
+      assert.equal(row.is_confirmed, 1);
+      assert.match(row.evidence, /<= length/);
+      assert.ok(row.detected_at);
+    });
+
+    it('tracks repeated mistake categories across multiple submissions for a learner', () => {
+      const subId2 = crypto.randomUUID();
+      const subId3 = crypto.randomUUID();
+
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, status)
+        VALUES (?, ?, ?, 'javascript', 'let x = 2;', 'failed')
+      `).run(subId2, testLearnerId, testChallengeId);
+
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, status)
+        VALUES (?, ?, ?, 'javascript', 'let x = 3;', 'failed')
+      `).run(subId3, testLearnerId, testChallengeId);
+
+      // Second loop_boundary (heuristic / possible)
+      recordBugFingerprint(db, {
+        learnerId: testLearnerId,
+        challengeId: testChallengeId,
+        submissionId: subId2,
+        category: FINGERPRINT_CATEGORIES.LOOP_BOUNDARY,
+        language: 'javascript',
+        confidence: 'medium',
+        evidence: 'Off-by-one numerical discrepancy',
+        isConfirmed: false
+      });
+
+      // Third mistake: wrong_index
+      recordBugFingerprint(db, {
+        learnerId: testLearnerId,
+        challengeId: testChallengeId,
+        submissionId: subId3,
+        category: FINGERPRINT_CATEGORIES.WRONG_INDEX,
+        language: 'javascript',
+        confidence: 'high',
+        evidence: 'Direct arr.length index access',
+        isConfirmed: true
+      });
+
+      const mistakes = getLearnerMistakes(db, testLearnerId);
+      assert.ok(Array.isArray(mistakes));
+      assert.equal(mistakes.length, 2);
+
+      const loopMistake = mistakes.find(m => m.patternKey === 'loop_boundary');
+      assert.ok(loopMistake);
+      assert.equal(loopMistake.count, 2);
+      assert.equal(loopMistake.confirmedCount, 1);
+      assert.equal(loopMistake.possibleCount, 1);
+      assert.ok(loopMistake.lastDetectedAt);
+
+      const indexMistake = mistakes.find(m => m.patternKey === 'wrong_index');
+      assert.ok(indexMistake);
+      assert.equal(indexMistake.count, 1);
+      assert.equal(indexMistake.confirmedCount, 1);
+      assert.equal(indexMistake.possibleCount, 0);
+    });
+
+    it('rejects database insertion when required challengeId or category is missing', () => {
+      assert.throws(() => {
+        recordBugFingerprint(db, { learnerId: 'learner-x', category: 'loop_boundary' });
+      }, /challengeId is required/);
+
+      assert.throws(() => {
+        recordBugFingerprint(db, { learnerId: 'learner-x', challengeId: 'c1' });
+      }, /category is required/);
+
+      assert.throws(() => {
+        recordBugFingerprint(null, { learnerId: 'learner-x', challengeId: 'c1', category: 'loop_boundary' });
+      }, /database instance is required/i);
+    });
+
+    it('returns empty array when querying mistakes for non-existent or null learnerId', () => {
+      assert.deepEqual(getLearnerMistakes(db, 'non-existent-learner-id-xyz'), []);
+      assert.deepEqual(getLearnerMistakes(db, null), []);
     });
   });
 });

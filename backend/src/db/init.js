@@ -40,6 +40,47 @@ export function initDb() {
     console.warn('[DB] Column check for submissions skipped:', err.message);
   }
 
+  try {
+    const fingerprintColumns = db.prepare("PRAGMA table_info(bug_fingerprints)").all().map(c => c.name);
+    if (!fingerprintColumns.includes('confidence')) {
+      db.exec("ALTER TABLE bug_fingerprints ADD COLUMN confidence TEXT DEFAULT 'high'");
+    }
+    if (!fingerprintColumns.includes('evidence')) {
+      db.exec("ALTER TABLE bug_fingerprints ADD COLUMN evidence TEXT");
+    }
+    if (!fingerprintColumns.includes('is_confirmed')) {
+      db.exec("ALTER TABLE bug_fingerprints ADD COLUMN is_confirmed INTEGER DEFAULT 1");
+    }
+  } catch (err) {
+    console.warn('[DB] Column check for bug_fingerprints skipped:', err.message);
+  }
+
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ebyf_reflections (
+        id TEXT PRIMARY KEY,
+        learner_id TEXT NOT NULL,
+        submission_id TEXT REFERENCES submissions(id) ON DELETE SET NULL,
+        challenge_id TEXT REFERENCES challenges(id) ON DELETE SET NULL,
+        question TEXT,
+        question_type TEXT,
+        explanation TEXT NOT NULL,
+        predicted_variable TEXT,
+        predicted_value TEXT,
+        evaluation TEXT NOT NULL CHECK(evaluation IN ('correct', 'partially_correct', 'incorrect')),
+        understood_correctly TEXT,
+        to_reconsider TEXT,
+        feedback TEXT NOT NULL,
+        can_proceed_to_hint INTEGER NOT NULL DEFAULT 1 CHECK(can_proceed_to_hint IN (0, 1)),
+        is_fallback INTEGER NOT NULL DEFAULT 0 CHECK(is_fallback IN (0, 1)),
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ebyf_reflections_learner ON ebyf_reflections(learner_id);
+    `);
+  } catch (err) {
+    console.warn('[DB] Table check for ebyf_reflections skipped:', err.message);
+  }
+
   // Run seed data
   if (fs.existsSync(seedPath)) {
     const seedSql = fs.readFileSync(seedPath, 'utf-8');

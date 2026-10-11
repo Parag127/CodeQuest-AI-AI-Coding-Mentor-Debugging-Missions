@@ -43,5 +43,6 @@
 - [x] Adaptive Challenge Recommendation API (`GET /api/recommendations/:learnerId`)
 - [x] Learning Progress & Recurring Mistakes API (`GET /api/progress/:learnerId`)
 - [x] Automated test suite with mocked Gemini client (109 passing tests)
-- [ ] Frontend CodeDNA components integration (Member 1)
-- [ ] Live Judge0 code execution runner (Member 2)
+- [x] Frontend CodeDNA components integration (MissionSandbox, EBYF gate, hints, results)
+- [x] Final Integration and Security Verification Suite (241 passing tests across 84 suites)
+- [ ] Live Judge0 code execution runner for production deployment (Member 2)

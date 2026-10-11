@@ -4,8 +4,10 @@ import express from 'express';
 import http from 'http';
 import { GeminiService } from '../services/geminiService.js';
 import { store } from '../data/store.js';
+import db from '../db/index.js';
 import explainBeforeFixRouter from '../routes/explainBeforeFix.js';
 import hintsRouter from '../routes/hints.js';
+import progressRouter from '../routes/progress.js';
 
 // Helper to dispatch HTTP requests to Express app without external network
 function createTestApp() {
@@ -13,6 +15,7 @@ function createTestApp() {
   app.use(express.json({ limit: '100kb' }));
   app.use('/api/explain-before-fix', explainBeforeFixRouter);
   app.use('/api/hints', hintsRouter);
+  app.use('/api/progress', progressRouter);
   return app;
 }
 
@@ -600,4 +603,112 @@ describe('CodeDNA Explain Before You Fix (EBYF) Feature', () => {
       assert.ok(hintRes.body.data.hint.length > 10);
     });
   });
+
+  describe('7. SQLite Persistence, Security & Learner Progress', () => {
+    it('persists reflection in SQLite ebyf_reflections table and updates submissions table', async () => {
+      const testSubId = `sub-sql-${Date.now()}`;
+      const testLearnerId = `learner-sql-${Date.now()}`;
+
+      // Seed submission in SQLite
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, pass_count, fail_count, status)
+        VALUES (?, ?, 'sum-positive', 'javascript', 'for(let i=0; i<=arr.length; i++) sum += arr[i];', 0, 1, 'failed')
+      `).run(testSubId, testLearnerId);
+
+      const res = await dispatch(app, {
+        method: 'POST',
+        path: '/api/explain-before-fix',
+        body: {
+          submissionId: testSubId,
+          learnerId: testLearnerId,
+          explanation: 'My loop condition i<=arr.length reads past the end of the array',
+          predictedVariable: 'i',
+          predictedValue: 'arr.length'
+        }
+      });
+
+      assert.equal(res.status, 200);
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.data.evaluation, 'correct');
+
+      // Check SQLite ebyf_reflections table directly
+      const reflection = db.prepare('SELECT * FROM ebyf_reflections WHERE submission_id = ?').get(testSubId);
+      assert.ok(reflection, 'Record must exist in SQLite ebyf_reflections table');
+      assert.equal(reflection.learner_id, testLearnerId);
+      assert.equal(reflection.evaluation, 'correct');
+      assert.equal(reflection.can_proceed_to_hint, 1);
+      assert.equal(reflection.predicted_variable, 'i');
+      assert.equal(reflection.predicted_value, 'arr.length');
+
+      // Check that submissions row has explanation and prediction recorded
+      const updatedSub = db.prepare('SELECT explanation, prediction FROM submissions WHERE id = ?').get(testSubId);
+      assert.equal(updatedSub.explanation, 'My loop condition i<=arr.length reads past the end of the array');
+      assert.match(updatedSub.prediction, /arr\.length/);
+
+      // Reset in-memory store to prove GET status reads from SQLite directly
+      store.reset();
+      const statusRes = await dispatch(app, {
+        method: 'GET',
+        path: `/api/explain-before-fix/status/${testLearnerId}/${testSubId}`
+      });
+      assert.equal(statusRes.status, 200);
+      assert.equal(statusRes.body.data.hasCompletedEbyf, true);
+      assert.equal(statusRes.body.data.record.evaluation, 'correct');
+    });
+
+    it('rejects cross-learner reflection attempts with 403 Forbidden', async () => {
+      const ownerSubId = `sub-owner-${Date.now()}`;
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, pass_count, fail_count, status)
+        VALUES (?, 'legitimate-owner', 'sum-positive', 'javascript', 'let x = 1;', 0, 1, 'failed')
+      `).run(ownerSubId);
+
+      const res = await dispatch(app, {
+        method: 'POST',
+        path: '/api/explain-before-fix',
+        body: {
+          submissionId: ownerSubId,
+          learnerId: 'malicious-attacker',
+          explanation: 'Attempting to reflect on another learners code'
+        }
+      });
+
+      assert.equal(res.status, 403);
+      assert.match(res.body.error, /permission|Unauthorized/i);
+    });
+
+    it('makes EBYF interactions available in progress telemetry via GET /api/progress/:learnerId', async () => {
+      const learnerId = `learner-prog-${Date.now()}`;
+      const subId = `sub-prog-${Date.now()}`;
+
+      db.prepare(`
+        INSERT INTO submissions (id, learner_id, challenge_id, language, code, pass_count, fail_count, status)
+        VALUES (?, ?, 'sum-positive', 'javascript', 'for(let i=0; i<=arr.length; i++)', 0, 1, 'failed')
+      `).run(subId, learnerId);
+
+      await dispatch(app, {
+        method: 'POST',
+        path: '/api/explain-before-fix',
+        body: {
+          submissionId: subId,
+          learnerId,
+          explanation: 'Off by one loop boundary error on <= arr.length',
+          predictedVariable: 'i',
+          predictedValue: 'arr.length'
+        }
+      });
+
+      const progRes = await dispatch(app, {
+        method: 'GET',
+        path: `/api/progress/${learnerId}`
+      });
+
+      assert.equal(progRes.status, 200);
+      assert.equal(progRes.body.success, true);
+      assert.ok(progRes.body.data.ebyf);
+      assert.ok(progRes.body.data.ebyf.totalReflections >= 1);
+      assert.equal(progRes.body.data.ebyf.evaluations.correct >= 1, true);
+    });
+  });
 });
+

@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS bug_fingerprints (
   submission_id TEXT REFERENCES submissions(id) ON DELETE SET NULL,
   pattern_key TEXT NOT NULL,
   language TEXT NOT NULL,
+  confidence TEXT DEFAULT 'high',
+  evidence TEXT,
+  is_confirmed INTEGER DEFAULT 1,
   detected_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -93,6 +96,26 @@ CREATE TABLE IF NOT EXISTS learner_progress (
   UNIQUE(learner_id, challenge_id)
 );
 
+-- Explain Before You Fix (EBYF) Reflections Table (Persistent storage for learner reasoning attempts)
+CREATE TABLE IF NOT EXISTS ebyf_reflections (
+  id TEXT PRIMARY KEY,
+  learner_id TEXT NOT NULL,
+  submission_id TEXT REFERENCES submissions(id) ON DELETE SET NULL,
+  challenge_id TEXT REFERENCES challenges(id) ON DELETE SET NULL,
+  question TEXT,
+  question_type TEXT,
+  explanation TEXT NOT NULL,
+  predicted_variable TEXT,
+  predicted_value TEXT,
+  evaluation TEXT NOT NULL CHECK(evaluation IN ('correct', 'partially_correct', 'incorrect')),
+  understood_correctly TEXT,
+  to_reconsider TEXT,
+  feedback TEXT NOT NULL,
+  can_proceed_to_hint INTEGER NOT NULL DEFAULT 1 CHECK(can_proceed_to_hint IN (0, 1)),
+  is_fallback INTEGER NOT NULL DEFAULT 0 CHECK(is_fallback IN (0, 1)),
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes for performant queries
 CREATE INDEX IF NOT EXISTS idx_test_cases_challenge_id ON test_cases(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_learner_challenge ON submissions(learner_id, challenge_id);
@@ -100,3 +123,5 @@ CREATE INDEX IF NOT EXISTS idx_test_results_submission_id ON test_results(submis
 CREATE INDEX IF NOT EXISTS idx_hint_history_learner ON hint_history(learner_id);
 CREATE INDEX IF NOT EXISTS idx_bug_fingerprints_learner ON bug_fingerprints(learner_id);
 CREATE INDEX IF NOT EXISTS idx_learner_progress_learner ON learner_progress(learner_id);
+CREATE INDEX IF NOT EXISTS idx_ebyf_reflections_learner ON ebyf_reflections(learner_id);
+

@@ -29,6 +29,8 @@ router.get('/', (req, res) => {
     const challenges = rows.map(toPublicChallengeSummary);
 
     res.json({
+      success: true,
+      data: challenges,
       challenges
     });
   } catch (error) {
@@ -97,6 +99,8 @@ router.get('/:id', (req, res) => {
     const publicChallenge = toPublicChallengeDetail(challengeRow, visibleTests);
 
     res.json({
+      success: true,
+      data: publicChallenge,
       challenge: publicChallenge
     });
   } catch (error) {

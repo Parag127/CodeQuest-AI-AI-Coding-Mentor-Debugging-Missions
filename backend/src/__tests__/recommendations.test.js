@@ -2,15 +2,18 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import http from 'http';
-import { getAdaptiveRecommendation } from '../services/recommendationService.js';
+import { getAdaptiveRecommendation, getLearnerConceptProgress } from '../services/recommendationService.js';
 import { getAllChallenges, seedChallenges } from '../data/seedChallenges.js';
 import { store } from '../data/store.js';
+import db from '../db/index.js';
 import recommendationsRouter from '../routes/recommendations.js';
+import progressRouter from '../routes/progress.js';
 
 function createTestApp() {
   const app = express();
   app.use(express.json());
   app.use('/api/recommendations', recommendationsRouter);
+  app.use('/api/progress', progressRouter);
   return app;
 }
 
@@ -344,6 +347,126 @@ describe('CodeDNA Adaptive Challenge Recommendation Feature', () => {
       assert.equal(res.status, 400);
       assert.equal(res.body.success, false);
       assert.match(res.body.error, /learnerId is required/);
+    });
+  });
+
+  describe('8. Adaptive Practice & Concept Mastery Tracking (Step 10)', () => {
+    const app = createTestApp();
+
+    it('prefers an easier challenge when learner repeatedly fails an intermediate challenge', () => {
+      const learnerId = 'failing-intermediate-coder';
+
+      // Record multiple failures on intermediate challenge filter-positive (concept conditions)
+      store.updateProgress(learnerId, 'filter-positive', {
+        passCount: 0,
+        totalTests: 4,
+        solved: false
+      });
+      store.updateProgress(learnerId, 'filter-positive', {
+        passCount: 1,
+        totalTests: 4,
+        solved: false
+      });
+
+      const rec = getAdaptiveRecommendation({
+        learnerId,
+        currentChallengeId: 'filter-positive'
+      });
+
+      assert.ok(rec.challenge);
+      assert.equal(rec.strategy, 'easier_concept_remediation');
+      assert.equal(rec.challenge.difficulty, 'beginner');
+      assert.equal(rec.challenge.concept, 'conditions');
+      assert.match(rec.reason, /easier challenge|foundational conditions/i);
+    });
+
+    it('records positive independent learning evidence when solving with 0 hints', () => {
+      const learnerId = 'independent-solver';
+
+      // Solves sum-array with 0 hints
+      store.updateProgress(learnerId, 'sum-array', {
+        passCount: 5,
+        totalTests: 5,
+        solved: true
+      });
+
+      const concepts = getLearnerConceptProgress(learnerId);
+      const loopConcept = concepts.find(c => c.concept === 'loops');
+
+      assert.ok(loopConcept);
+      assert.equal(loopConcept.independentSolves, 1);
+      assert.equal(loopConcept.guidedSolves, 0);
+      assert.equal(loopConcept.hintsUsed, 0);
+      // Crucial: exactly 1 solve must NOT mark mastery
+      assert.equal(loopConcept.status, 'practicing');
+    });
+
+    it('does NOT mark a concept mastered because of only one successful submission', () => {
+      const learnerId = 'single-solve-coder';
+
+      store.updateProgress(learnerId, 'find-max', {
+        passCount: 5,
+        totalTests: 5,
+        solved: true
+      });
+
+      const concepts = getLearnerConceptProgress(learnerId);
+      const condConcept = concepts.find(c => c.concept === 'conditions');
+
+      assert.ok(condConcept);
+      assert.equal(condConcept.solvedCount, 1);
+      assert.notEqual(condConcept.status, 'mastered', 'Must NOT mark concept mastered after single solve');
+      assert.equal(condConcept.status, 'practicing');
+    });
+
+    it('marks concept mastered when multiple distinct challenges are solved independently without recent mistakes', () => {
+      const learnerId = 'multi-solve-master';
+
+      // Solves both sum-array and reverse-string independently (both belong to loops concept)
+      store.updateProgress(learnerId, 'sum-array', { passCount: 5, totalTests: 5, solved: true });
+      store.updateProgress(learnerId, 'reverse-string', { passCount: 4, totalTests: 4, solved: true });
+
+      const concepts = getLearnerConceptProgress(learnerId);
+      const loopConcept = concepts.find(c => c.concept === 'loops');
+
+      assert.ok(loopConcept);
+      assert.equal(loopConcept.independentSolves, 2);
+      assert.equal(loopConcept.recentMistakes, 0);
+      assert.equal(loopConcept.status, 'mastered');
+    });
+
+    it('merges SQLite database records for persistent recommendation and concept telemetry', () => {
+      const learnerId = `sqlite-learner-${Date.now()}`;
+
+      // Insert progress directly in SQLite learner_progress table
+      db.prepare(`
+        INSERT INTO learner_progress (id, learner_id, challenge_id, attempts, hints_used, best_pass_count, solved, last_attempt_at)
+        VALUES (?, ?, 'sum-positive', 2, 0, 5, 1, datetime('now'))
+      `).run(`lp-${Date.now()}`, learnerId);
+
+      const concepts = getLearnerConceptProgress(learnerId);
+      const condConcept = concepts.find(c => c.concept === 'conditions' || c.concept === 'empty_input');
+
+      assert.ok(condConcept);
+      assert.ok(condConcept.attempts >= 2);
+    });
+
+    it('GET /api/progress/:learnerId exposes concept proficiency breakdown', async () => {
+      const learnerId = `telemetry-learner-${Date.now()}`;
+
+      store.updateProgress(learnerId, 'sum-array', { passCount: 5, totalTests: 5, solved: true });
+
+      const res = await dispatch(app, {
+        method: 'GET',
+        path: `/api/progress/${learnerId}`
+      });
+
+      assert.equal(res.status, 200);
+      assert.equal(res.body.success, true);
+      assert.ok(Array.isArray(res.body.data.concepts));
+      const loops = res.body.data.concepts.find(c => c.concept === 'loops');
+      assert.ok(loops);
+      assert.ok(loops.attempts >= 1);
     });
   });
 });

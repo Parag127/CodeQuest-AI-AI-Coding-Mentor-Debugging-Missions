@@ -261,7 +261,7 @@ export default function App() {
         <MarqueeStrip />
 
         {/* Core CodeDNA Debugging Sandbox */}
-        <MissionSandbox />
+        <MissionSandbox currentUser={currentUser} />
 
         {/* Browser Showcase: Live Telemetry, CRUD, Topology */}
         <ShowcaseBrowser 

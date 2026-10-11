@@ -421,6 +421,17 @@ export function executeMockSubmission({ language, code, stdin = '', expectedOutp
       const max = buggyNumbers.length > 0 ? Math.max(...buggyNumbers) : numbers[0];
       simulatedStdout = `${max}\n`;
     }
+  } else if (code.includes('sumPositive') || code.includes('sum-positive')) {
+    // Sum positive numbers simulation
+    const allNums = (stdin.match(/-?\d+/g) || []).map(Number);
+    const numbers = allNums.length > 1 ? allNums.slice(1) : [];
+    if (code.includes('numbers[i] > 0') || code.includes('> 0')) {
+      const sum = numbers.filter(n => n > 0).reduce((acc, curr) => acc + curr, 0);
+      simulatedStdout = `${sum}\n`;
+    } else {
+      const sum = numbers.reduce((acc, curr) => acc + curr, 0);
+      simulatedStdout = `${sum}\n`;
+    }
   } else {
     // Default simulated output: echo stdin or sample
     simulatedStdout = stdin ? (stdin.endsWith('\n') ? stdin : `${stdin}\n`) : 'output\n';

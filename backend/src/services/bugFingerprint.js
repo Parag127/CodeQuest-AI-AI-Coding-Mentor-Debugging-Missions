@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 /**
  * CodeDNA Bug Fingerprint Service
  * Deterministic, rule-based classifier that identifies beginner mistake patterns
@@ -20,6 +22,17 @@ export const FINGERPRINT_CATEGORIES = {
 };
 
 export const BUG_PATTERNS = {
+  LOOP_BOUNDARY: 'loop_boundary',
+  OFF_BY_ONE: 'off_by_one',
+  WRONG_CONDITION: 'wrong_condition',
+  WRONG_INDEX: 'wrong_index',
+  ARRAY_INDEX_ERROR: 'wrong_index',
+  EMPTY_INPUT: 'empty_input',
+  EMPTY_INPUT_UNHANDLED: 'empty_input',
+  NULL_DEREFERENCE: 'wrong_index',
+  UNKNOWN: 'unknown',
+  GENERAL: 'unknown',
+
   loop_boundary: {
     key: 'loop_boundary',
     label: 'Loop Boundary Error',
@@ -212,7 +225,7 @@ function checkJavaScriptRules(code, failingTests) {
   const findings = [];
 
   // JS rule 1: Assignment operator inside if or while condition `if (x = y)`
-  const jsAssignmentInCondition = /(?:if|while)\s*\([^=]*\b\w+\s*=\s*[^=][^)]*\)/;
+  const jsAssignmentInCondition = /(?:if|while)\s*\([^;{()]*\b[a-zA-Z_$][\w$]*\s*=(?!=)\s*[^;{()]*\)/;
   if (jsAssignmentInCondition.test(code)) {
     findings.push({
       category: FINGERPRINT_CATEGORIES.WRONG_CONDITION,
@@ -263,7 +276,7 @@ function checkJavaScriptRules(code, failingTests) {
 /**
  * Language-agnostic deterministic rule detectors.
  */
-function checkCommonRules(code, failingTests, language) {
+function checkCommonRules(code, failingTests, language, concept = null) {
   const findings = [];
 
   // Common rule 1: empty_input
@@ -285,7 +298,8 @@ function checkCommonRules(code, failingTests, language) {
   const loopBoundaryRegex = /(?:<=\s*(?:\w+\.)?(?:length|size\(\)|len))\b/i;
   const forLoopHeaderRegex = /for\s*\([^;]+;\s*[^;]*<=\s*[^;]*(?:\.length|\.size\(\)|len);/i;
   const hasLoopBoundaryCode = loopBoundaryRegex.test(code) || forLoopHeaderRegex.test(code);
-  const hasOffByOneOutput = failingTests.some(t => t.status === 'wrong_output' && isNumericOrLengthOffByOne(t.stdout, t.expected_output));
+  const hasOffByOneOutput = failingTests.some(t => t.status === 'wrong_output' && isNumericOrLengthOffByOne(t.stdout, t.expected_output || t.expected));
+  const isLoopConcept = concept === 'loop_boundary';
 
   if (hasLoopBoundaryCode) {
     const hasIndexException = failingTests.some(t => {
@@ -303,11 +317,15 @@ function checkCommonRules(code, failingTests, language) {
       confidence: isHighConfidence ? 'high' : 'medium',
       isHeuristic: !isHighConfidence
     });
-  } else if (hasOffByOneOutput) {
+  } else if (hasOffByOneOutput || (isLoopConcept && failingTests.length > 0)) {
     findings.push({
       category: FINGERPRINT_CATEGORIES.LOOP_BOUNDARY,
-      reason: 'Output differs from expected value by exactly 1 element or numerical value, indicating an off-by-one loop boundary error.',
-      evidence: 'Failing test output differs from expected output by exactly 1.',
+      reason: hasOffByOneOutput
+        ? 'Output differs from expected value by exactly 1 element or numerical value, indicating an off-by-one loop boundary error.'
+        : 'The loop may be stopping before it visits every element or iterating out of bounds.',
+      evidence: hasOffByOneOutput
+        ? 'Failing test output differs from expected output by exactly 1.'
+        : 'Failing tests observed under loop_boundary concept challenge.',
       confidence: 'medium',
       isHeuristic: true
     });
@@ -350,8 +368,8 @@ function checkCommonRules(code, failingTests, language) {
 
   // Common rule 4: wrong_condition (inverted relational comparison heuristic)
   // e.g., in min/max logic: max = arr[i] where condition checked < max
-  const invertedMaxRegex = /if\s*\([^)]*<\s*(?:max|largest|high)[^)]*\)\s*\{?[^}]*(?:max|largest|high)\s*=/i;
-  const invertedMinRegex = /if\s*\([^)]*>\s*(?:min|smallest|low)[^)]*\)\s*\{?[^}]*(?:min|smallest|low)\s*=/i;
+  const invertedMaxRegex = /if\s*\([^;{()]*<\s*(?:max|largest|high)[^;{()]*\)\s*\{?[^;{}]*(?:max|largest|high)\s*=/i;
+  const invertedMinRegex = /if\s*\([^;{()]*>\s*(?:min|smallest|low)[^;{()]*\)\s*\{?[^;{}]*(?:min|smallest|low)\s*=/i;
   if (invertedMaxRegex.test(code) || invertedMinRegex.test(code)) {
     findings.push({
       category: FINGERPRINT_CATEGORIES.WRONG_CONDITION,
@@ -373,47 +391,69 @@ function checkCommonRules(code, failingTests, language) {
  * @param {string} [options.language='javascript'] - 'java' | 'javascript'
  * @param {Array} [options.testResults=[]] - Authoritative execution test results
  * @param {Object} [options.executionResults=null] - Optional execution results object
- * @returns {{ category: string, reason: string, evidence: string|null, confidence: string, isHeuristic: boolean, language: string, allFindings: Array }}
+ * @param {string} [options.concept=null] - Challenge concept metadata
+ * @returns {{ category: string, reason: string, evidence: string|null, confidence: string, isConfirmed: boolean, isHeuristic: boolean, language: string, allFindings: Array, detectedPatterns: Array<string>, feedback: Object|null }}
  */
 export function classifyBugFingerprint({
   code = '',
   language = 'javascript',
   testResults = [],
-  executionResults = null
+  executionResults = null,
+  concept = null
 } = {}) {
-  const normLang = String(language).toLowerCase() === 'java' ? 'java' : 'javascript';
+  const safeCode = typeof code === 'string' ? code : '';
+  const normLang = String(language || 'javascript').toLowerCase() === 'java' ? 'java' : 'javascript';
   const tests = Array.isArray(testResults) && testResults.length > 0
     ? testResults
     : (executionResults && Array.isArray(executionResults.testResults) ? executionResults.testResults : []);
 
-  // 1. If all tests passed or no failing tests, no bug fingerprint is assigned
+  // 1. If no tests provided, return unknown with low confidence
+  if (!tests.length) {
+    return {
+      category: FINGERPRINT_CATEGORIES.UNKNOWN,
+      reason: 'No test execution results provided to evaluate.',
+      evidence: null,
+      confidence: 'low',
+      isConfirmed: false,
+      isHeuristic: false,
+      language: normLang,
+      allFindings: [],
+      detectedPatterns: [],
+      feedback: null
+    };
+  }
+
+  // 2. If all tests passed or no failing tests, no bug fingerprint is assigned
   const hasFailingTests = tests.some(t => t && t.status !== 'passed');
-  if (tests.length > 0 && !hasFailingTests) {
+  if (!hasFailingTests) {
     return {
       category: FINGERPRINT_CATEGORIES.UNKNOWN,
       reason: 'All evaluated tests passed successfully; no bug detected.',
       evidence: null,
       confidence: 'low',
+      isConfirmed: false,
       isHeuristic: false,
       language: normLang,
-      allFindings: []
+      allFindings: [],
+      detectedPatterns: [],
+      feedback: null
     };
   }
 
   const failingTests = tests.filter(t => t && t.status !== 'passed');
 
-  // 2. Gather language-specific and common rule findings
+  // 3. Gather language-specific and common rule findings
   const findings = [];
 
   if (normLang === 'java') {
-    findings.push(...checkJavaRules(code, failingTests));
+    findings.push(...checkJavaRules(safeCode, failingTests));
   } else {
-    findings.push(...checkJavaScriptRules(code, failingTests));
+    findings.push(...checkJavaScriptRules(safeCode, failingTests));
   }
 
-  findings.push(...checkCommonRules(code, failingTests, normLang));
+  findings.push(...checkCommonRules(safeCode, failingTests, normLang, concept));
 
-  // 3. Ambiguous cases resolution & priority ranking:
+  // 4. Ambiguous cases resolution & priority ranking:
   // Priority:
   // 1) empty_input (when explicitly triggered by empty test case)
   // 2) loop_boundary (when loop syntax is present alongside boundary errors)
@@ -426,9 +466,12 @@ export function classifyBugFingerprint({
       reason: 'No deterministic bug pattern conclusively identified from available evidence.',
       evidence: null,
       confidence: 'low',
+      isConfirmed: false,
       isHeuristic: false,
       language: normLang,
-      allFindings: []
+      allFindings: [],
+      detectedPatterns: [],
+      feedback: null
     };
   }
 
@@ -459,14 +502,54 @@ export function classifyBugFingerprint({
     primary = findings[0];
   }
 
+  const isConfirmed = primary.confidence === 'high';
+
+  // Build detected patterns array including canonical keys and legacy aliases
+  const detected = new Set();
+  detected.add(primary.category);
+  for (const f of uniqueByCategory.values()) {
+    detected.add(f.category);
+  }
+
+  if (detected.has(FINGERPRINT_CATEGORIES.LOOP_BOUNDARY)) {
+    detected.add('loop_condition');
+    for (const t of failingTests) {
+      if (t.status === 'wrong_output' && isNumericOrLengthOffByOne(t.stdout, t.expected_output || t.expected)) {
+        detected.add('off_by_one');
+      }
+    }
+  }
+  if (detected.has(FINGERPRINT_CATEGORIES.WRONG_INDEX)) {
+    detected.add('array_index_error');
+    if (failingTests.some(t => String(t.stderr || '').includes('NullPointer') || String(t.stderr || '').includes('null'))) {
+      detected.add('null_dereference');
+    }
+  }
+  if (detected.has(FINGERPRINT_CATEGORIES.EMPTY_INPUT)) {
+    detected.add('empty_input_unhandled');
+  }
+
+  const detectedPatterns = Array.from(detected);
+
+  const feedback = {
+    summary: primary.reason,
+    bugCategory: primary.category,
+    confidence: primary.confidence,
+    isConfirmed,
+    hintLevelAvailable: 1
+  };
+
   return {
     category: primary.category,
     reason: primary.reason,
     evidence: primary.evidence,
     confidence: primary.confidence,
+    isConfirmed,
     isHeuristic: primary.isHeuristic,
     language: normLang,
-    allFindings: Array.from(uniqueByCategory.values())
+    allFindings: Array.from(uniqueByCategory.values()),
+    detectedPatterns,
+    feedback
   };
 }
 
@@ -481,42 +564,90 @@ export function classifyBugFingerprint({
  * @returns {Array<string>} Unique list of detected pattern keys
  */
 export function classifyBugFingerprints({ code = '', language = 'javascript', testResults = [] } = {}) {
-  const primaryResult = classifyBugFingerprint({ code, language, testResults });
-
-  if (primaryResult.category === FINGERPRINT_CATEGORIES.UNKNOWN) {
-    return [];
-  }
-
-  const detected = new Set();
-  // Add canonical category
-  detected.add(primaryResult.category);
-
-  // Add all other detected findings if multiple
-  if (Array.isArray(primaryResult.allFindings)) {
-    for (const f of primaryResult.allFindings) {
-      detected.add(f.category);
-    }
-  }
-
-  // Include legacy alias keys so existing tests and consumers continue to work seamlessly
-  if (detected.has(FINGERPRINT_CATEGORIES.LOOP_BOUNDARY)) {
-    detected.add('loop_condition');
-    // Check if off-by-one is specifically present
-    for (const t of testResults) {
-      if (t.status === 'wrong_output' && isNumericOrLengthOffByOne(t.stdout, t.expected_output)) {
-        detected.add('off_by_one');
-      }
-    }
-  }
-  if (detected.has(FINGERPRINT_CATEGORIES.WRONG_INDEX)) {
-    detected.add('array_index_error');
-    if (testResults.some(t => String(t.stderr || '').includes('NullPointer') || String(t.stderr || '').includes('null'))) {
-      detected.add('null_dereference');
-    }
-  }
-  if (detected.has(FINGERPRINT_CATEGORIES.EMPTY_INPUT)) {
-    detected.add('empty_input_unhandled');
-  }
-
-  return Array.from(detected);
+  const result = classifyBugFingerprint({ code, language, testResults });
+  return result.detectedPatterns || [];
 }
+
+/**
+ * Persists a classified bug fingerprint to the SQLite bug_fingerprints table.
+ *
+ * @param {Object} db - SQLite database instance
+ * @param {Object} record
+ * @param {string} record.learnerId
+ * @param {string} record.challengeId
+ * @param {string} record.submissionId
+ * @param {string} record.category
+ * @param {string} record.language
+ * @param {string} [record.confidence='high']
+ * @param {string} [record.evidence=null]
+ * @param {boolean} [record.isConfirmed=true]
+ * @returns {string} ID of created record
+ */
+export function recordBugFingerprint(db, {
+  learnerId,
+  challengeId,
+  submissionId,
+  category,
+  language = 'javascript',
+  confidence = 'high',
+  evidence = null,
+  isConfirmed = true
+} = {}) {
+  if (!db) throw new Error('Database instance is required');
+  if (!challengeId) throw new Error('challengeId is required');
+  if (!category) throw new Error('category is required');
+
+  const id = crypto.randomUUID();
+  const stmt = db.prepare(`
+    INSERT INTO bug_fingerprints (
+      id, learner_id, challenge_id, submission_id, pattern_key, language, confidence, evidence, is_confirmed
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(
+    id,
+    learnerId || null,
+    challengeId,
+    submissionId || null,
+    category,
+    language,
+    confidence,
+    evidence,
+    isConfirmed ? 1 : 0
+  );
+
+  return id;
+}
+
+/**
+ * Queries repeated mistake categories and occurrence counts for a learner from SQLite.
+ * Distinguishes confirmed errors from possible / heuristic mistakes.
+ *
+ * @param {Object} db - SQLite database instance
+ * @param {string} learnerId
+ * @returns {Array<{ patternKey: string, count: number, confirmedCount: number, possibleCount: number, lastDetectedAt: string }>}
+ */
+export function getLearnerMistakes(db, learnerId) {
+  if (!db || !learnerId) return [];
+
+  const rows = db.prepare(`
+    SELECT pattern_key,
+           COUNT(*) as count,
+           SUM(CASE WHEN is_confirmed = 1 OR confidence = 'high' THEN 1 ELSE 0 END) as confirmed_count,
+           SUM(CASE WHEN is_confirmed = 0 AND confidence != 'high' THEN 1 ELSE 0 END) as possible_count,
+           MAX(detected_at) as last_detected_at
+    FROM bug_fingerprints
+    WHERE learner_id = ?
+    GROUP BY pattern_key
+    ORDER BY count DESC
+  `).all(learnerId);
+
+  return rows.map(r => ({
+    patternKey: r.pattern_key,
+    count: Number(r.count),
+    confirmedCount: Number(r.confirmed_count || 0),
+    possibleCount: Number(r.possible_count || 0),
+    lastDetectedAt: r.last_detected_at
+  }));
+}
+

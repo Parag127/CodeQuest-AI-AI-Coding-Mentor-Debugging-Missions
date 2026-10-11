@@ -1,188 +1,541 @@
-import React, { useState } from 'react';
-import { Play, CheckCircle2, XCircle, AlertCircle, Sparkles, Brain, Lock, Unlock, HelpCircle, Shield, RotateCcw, Award } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Play, 
+  CheckCircle2, 
+  XCircle, 
+  AlertCircle, 
+  Sparkles, 
+  Brain, 
+  Lock, 
+  Unlock, 
+  HelpCircle, 
+  Shield, 
+  RotateCcw, 
+  Award, 
+  Clock, 
+  RefreshCw, 
+  Zap, 
+  ArrowRight, 
+  Lightbulb, 
+  Terminal,
+  Compass
+} from 'lucide-react';
 
-const MISSIONS = [
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Fallback seed challenges in case the server is starting or offline
+const FALLBACK_CHALLENGES = [
   {
-    id: 'off-by-one',
-    title: 'Off-by-One Array Boundary',
-    category: 'Index Safety',
-    difficulty: 'Easy',
-    fingerprintTag: 'Off-by-One Loop Traversal',
-    description: 'The search function crashes on the final iteration because it loops past the last valid array index.',
-    jsBuggy: `function findFirstPositive(numbers) {
-  // Bug: loops until i <= numbers.length, causing undefined access
-  for (let i = 0; i <= numbers.length; i++) {
-    if (numbers[i] > 0) {
-      return numbers[i];
+    id: 'largest-number',
+    title: 'Find the largest number',
+    difficulty: 'easy',
+    concept: 'loop_boundary',
+    description: 'Debug the program so it prints the largest integer in the input array.',
+    languages: ['javascript', 'java'],
+    starterCode: {
+      javascript: `const fs = require('fs');
+
+function findLargest(numbers) {
+  // Buggy implementation: loops until numbers.length - 1 with < boundary, missing the last item
+  let max = numbers[0];
+  for (let i = 1; i < numbers.length - 1; i++) {
+    if (numbers[i] > max) {
+      max = numbers[i];
     }
   }
-  return -1;
+  return max;
+}
+
+const input = fs.readFileSync(0, 'utf-8').trim();
+if (input.length > 0) {
+  const lines = input.split('\\n');
+  const numbers = (lines[1] || lines[0]).trim().split(/\\s+/).map(Number);
+  console.log(findLargest(numbers));
 }`,
-    javaBuggy: `public static int findFirstPositive(int[] numbers) {
-    // Bug: loops until i <= numbers.length, throwing ArrayIndexOutOfBoundsException
-    for (int i = 0; i <= numbers.length; i++) {
-        if (numbers[i] > 0) {
-            return numbers[i];
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static int findLargest(int[] numbers) {
+        // Buggy implementation: loops until numbers.length - 1 with < boundary, missing the last item
+        int max = numbers[0];
+        for (let i = 1; i < numbers.length - 1; i++) {
+            if (numbers[i] > max) {
+                max = numbers[i];
+            }
+        }
+        return max;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int n = scanner.nextInt();
+            int[] numbers = new int[n];
+            for (int i = 0; i < n; i++) {
+                numbers[i] = scanner.nextInt();
+            }
+            System.out.println(findLargest(numbers));
         }
     }
-    return -1;
-}`,
-    checkFix: (code, lang) => {
-      // Clean check to see if learner fixed the <= bug to <
-      const clean = code.replace(/\s+/g, ' ');
-      const hasStrictLessThan = clean.includes('i < numbers.length');
-      const hasNoLessThanEquals = !clean.includes('i <= numbers.length');
-      return hasStrictLessThan && hasNoLessThanEquals;
+}`
     },
-    hints: [
-      { tier: 1, title: 'Concept Clue', text: 'Remember that arrays are 0-indexed. If an array has length 4, valid indexes are 0, 1, 2, and 3.' },
-      { tier: 2, title: 'Location Clue', text: 'Inspect the loop termination condition in line 3. What happens when i equals numbers.length?' },
-      { tier: 3, title: 'Logic Blueprint', text: 'Change the loop condition from <= to < so the loop terminates before accessing out-of-bounds memory.' }
-    ],
-    publicTests: [
-      { input: 'numbers = [-2, -1, 5, 8]', expected: '5' },
-      { input: 'numbers = [-5, -3, -1]', expected: '-1' }
+    visibleTests: [
+      { id: 'visible-1', stdin: '4\\n2 5 1 9\\n', expectedStdout: '9\\n' },
+      { id: 'visible-2', stdin: '3\\n10 20 30\\n', expectedStdout: '30\\n' },
+      { id: 'visible-3', stdin: '1\\n42\\n', expectedStdout: '42\\n' }
     ]
   },
   {
-    id: 'null-safety',
-    title: 'Null Safety & Guard Clause',
-    category: 'Null Pointer Guard',
-    difficulty: 'Medium',
-    fingerprintTag: 'Unchecked Null Reference',
-    description: 'The profile parser crashes when receiving null or undefined user objects instead of providing a fallback.',
-    jsBuggy: `function getUserDisplayName(user) {
-  // Bug: fails when user is null or undefined
-  return user.profile.name.toUpperCase();
-}`,
-    javaBuggy: `public static String getUserDisplayName(User user) {
-    // Bug: throws NullPointerException if user or profile is null
-    return user.getProfile().getName().toUpperCase();
-}`,
-    checkFix: (code, lang) => {
-      const clean = code.toLowerCase();
-      if (lang === 'js') {
-        return clean.includes('!user') || clean.includes('user?.') || clean.includes('user &&');
-      } else {
-        return clean.includes('user == null') || clean.includes('user != null') || clean.includes('if (user');
-      }
+    id: 'reverse-string',
+    title: 'Reverse a String',
+    difficulty: 'easy',
+    concept: 'string_reversal',
+    description: 'Write a program that reads a string from standard input and prints the reversed string to standard output.',
+    languages: ['javascript', 'java'],
+    starterCode: {
+      javascript: `const fs = require('fs');
+
+function solution(str) {
+  // TODO: Return the reversed string
+  return str;
+}
+
+const input = fs.readFileSync(0, 'utf-8').trim();
+console.log(solution(input));`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static String solution(String str) {
+        // TODO: Return the reversed string
+        return str;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextLine()) {
+            String input = scanner.nextLine();
+            System.out.println(solution(input));
+        }
+    }
+}`
     },
-    hints: [
-      { tier: 1, title: 'Concept Clue', text: 'Always add a guard clause at the very beginning of the function before accessing nested properties.' },
-      { tier: 2, title: 'Location Clue', text: 'Check if user is null or undefined before reading user.profile or calling getProfile().' },
-      { tier: 3, title: 'Logic Blueprint', text: 'Return a fallback string like "GUEST" or "ANONYMOUS" if the input user is null.' }
-    ],
-    publicTests: [
-      { input: 'user = { profile: { name: "Alice" } }', expected: '"ALICE"' },
-      { input: 'user = null', expected: 'Graceful Fallback' }
+    visibleTests: [
+      { id: 'tc-rev-1', stdin: 'hello\\n', expectedStdout: 'olleh\\n' },
+      { id: 'tc-rev-2', stdin: 'world\\n', expectedStdout: 'dlrow\\n' },
+      { id: 'tc-rev-3', stdin: 'CodeDNA\\n', expectedStdout: 'ANDedoC\\n' }
     ]
   },
   {
-    id: 'string-palindrome',
-    title: 'Case-Insensitive Palindrome',
-    category: 'String Transformation',
-    difficulty: 'Easy',
-    fingerprintTag: 'Unsanitized Character Equality',
-    description: 'The validator fails on mixed-case inputs like "Radar" because it does not normalize casing before reversing.',
-    jsBuggy: `function isPalindrome(str) {
-  // Bug: does not normalize casing or remove punctuation
-  const reversed = str.split('').reverse().join('');
-  return str === reversed;
+    id: 'sum-positive',
+    title: 'Sum Positive Numbers',
+    difficulty: 'easy',
+    concept: 'array_conditions',
+    description: 'Debug the program so it sums only positive integers (> 0). If empty or no positives, print 0.',
+    languages: ['javascript', 'java'],
+    starterCode: {
+      javascript: `const fs = require('fs');
+
+function sumPositive(numbers) {
+  // Buggy implementation: crashes on empty array and adds all numbers instead of only positive ones
+  let total = 0;
+  for (let i = 0; i < numbers.length; i++) {
+    total += numbers[i];
+  }
+  return total;
+}
+
+const input = fs.readFileSync(0, 'utf-8').trim();
+if (!input) {
+  console.log(0);
+} else {
+  const lines = input.split('\\n');
+  const count = parseInt(lines[0], 10);
+  if (count === 0 || !lines[1]) {
+    console.log(0);
+  } else {
+    const numbers = lines[1].trim().split(/\\s+/).map(Number);
+    console.log(sumPositive(numbers));
+  }
 }`,
-    javaBuggy: `public static boolean isPalindrome(String str) {
-    // Bug: direct comparison fails for mixed casing like "Radar"
-    String reversed = new StringBuilder(str).reverse().toString();
-    return str.equals(reversed);
-}`,
-    checkFix: (code, lang) => {
-      const clean = code.toLowerCase();
-      return clean.includes('tolowercase') || clean.includes('touppercase');
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static int sumPositive(int[] numbers) {
+        // Buggy implementation: adds all numbers instead of only positive ones (> 0)
+        int total = 0;
+        for (int i = 0; i < numbers.length; i++) {
+            total += numbers[i];
+        }
+        return total;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int n = scanner.nextInt();
+            int[] numbers = new int[n];
+            for (int i = 0; i < n; i++) {
+                numbers[i] = scanner.nextInt();
+            }
+            System.out.println(sumPositive(numbers));
+        } else {
+            System.out.println(0);
+        }
+    }
+}`
     },
-    hints: [
-      { tier: 1, title: 'Concept Clue', text: 'Palindromes like "Racecar" and "Radar" should be valid regardless of uppercase or lowercase characters.' },
-      { tier: 2, title: 'Location Clue', text: 'Normalize the input string to lowercase before comparing it with the reversed version.' },
-      { tier: 3, title: 'Logic Blueprint', text: 'Call toLowerCase() on the string before splitting/reversing and comparing.' }
-    ],
-    publicTests: [
-      { input: 'str = "racecar"', expected: 'true' },
-      { input: 'str = "Radar"', expected: 'true' }
+    visibleTests: [
+      { id: 'tc-pos-1', stdin: '4\\n1 2 3 4\\n', expectedStdout: '10\\n' },
+      { id: 'tc-pos-2', stdin: '3\\n-1 5 2\\n', expectedStdout: '7\\n' }
     ]
   }
 ];
 
-export default function MissionSandbox() {
-  const [activeMissionIndex, setActiveMissionIndex] = useState(0);
-  const [selectedLang, setSelectedLang] = useState('js');
+export default function MissionSandbox({ currentUser }) {
+  const activeLearnerId = currentUser?.id ? String(currentUser.id) : 'learner-demo-1';
+
+  // Catalog & Challenge State
+  const [challenges, setChallenges] = useState(FALLBACK_CHALLENGES);
+  const [activeChallengeId, setActiveChallengeId] = useState(FALLBACK_CHALLENGES[0].id);
+  const [currentChallenge, setCurrentChallenge] = useState(FALLBACK_CHALLENGES[0]);
+  const [selectedLang, setSelectedLang] = useState('javascript'); // 'javascript' | 'java'
+  const [userCode, setUserCode] = useState(FALLBACK_CHALLENGES[0].starterCode.javascript);
   
-  const currentMission = MISSIONS[activeMissionIndex];
-  const [userCode, setUserCode] = useState(selectedLang === 'js' ? currentMission.jsBuggy : currentMission.javaBuggy);
+  // Cognitive Gate & EBYF State
   const [explanation, setExplanation] = useState('');
-  const [unlockedHints, setUnlockedHints] = useState([0]); // Hint 1 is free
-  const [activeFeedbackTab, setActiveFeedbackTab] = useState('tests'); // 'tests' | 'hints' | 'fingerprint'
-  
-  const [testResults, setTestResults] = useState(null);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [predictedVariable, setPredictedVariable] = useState('');
+  const [predictedValue, setPredictedValue] = useState('');
+  const [ebyfQuestion, setEbyfQuestion] = useState(null);
+  const [ebyfFeedback, setEbyfFeedback] = useState(null);
+  const [isEbyfSubmitting, setIsEbyfSubmitting] = useState(false);
   const [explanationError, setExplanationError] = useState(false);
 
-  // Switch mission
-  const handleSelectMission = (idx) => {
-    setActiveMissionIndex(idx);
-    const m = MISSIONS[idx];
-    setUserCode(selectedLang === 'js' ? m.jsBuggy : m.javaBuggy);
+  // Progressive Hints State
+  const [unlockedHints, setUnlockedHints] = useState({}); // { 1: { text, isFallback }, 2: ..., 3: ... }
+  const [isHintLoading, setIsHintLoading] = useState(false);
+
+  // Execution & Submissions State
+  const [lastSubmissionId, setLastSubmissionId] = useState(null);
+  const [testResults, setTestResults] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeFeedbackTab, setActiveFeedbackTab] = useState('tests'); // 'tests' | 'hints' | 'fingerprint' | 'ebyf' | 'adaptive'
+  
+  // Progress & Adaptive Recommendation State
+  const [learnerProgress, setLearnerProgress] = useState(null);
+  const [recommendation, setRecommendation] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Helper to get formatted starter code
+  const getStarterCode = (challengeObj, lang) => {
+    if (!challengeObj?.starterCode) return '';
+    return challengeObj.starterCode[lang] || challengeObj.starterCode[lang === 'javascript' ? 'javascript' : 'java'] || '';
+  };
+
+  // 1. Fetch Challenge Catalog
+  const fetchChallengesCatalog = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/challenges`);
+      if (res.ok) {
+        const json = await res.json();
+        const catalogList = json.challenges || json.data || [];
+        if (Array.isArray(catalogList) && catalogList.length > 0) {
+          setChallenges(catalogList);
+          setIsOnline(true);
+        }
+      }
+    } catch (err) {
+      console.warn('[MissionSandbox] Catalog API currently using local fallback:', err.message);
+      setIsOnline(false);
+    }
+  }, []);
+
+  // 2. Load Single Challenge Details
+  const loadChallengeDetails = useCallback(async (challengeId, lang) => {
+    setApiError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/challenges/${challengeId}`);
+      if (res.ok) {
+        const json = await res.json();
+        const detail = json.challenge || json.data;
+        if (detail) {
+          setCurrentChallenge(detail);
+          const newCode = getStarterCode(detail, lang);
+          if (newCode) setUserCode(newCode);
+          setIsOnline(true);
+          return detail;
+        }
+      }
+    } catch (err) {
+      console.warn(`[MissionSandbox] Detail API fallback for ${challengeId}:`, err.message);
+      setIsOnline(false);
+    }
+
+    // Fallback to local
+    const fallback = FALLBACK_CHALLENGES.find(c => c.id === challengeId) || FALLBACK_CHALLENGES[0];
+    setCurrentChallenge(fallback);
+    setUserCode(getStarterCode(fallback, lang));
+    return fallback;
+  }, []);
+
+  // 3. Fetch EBYF Question for Current Challenge
+  const fetchEbyfQuestion = useCallback(async (challengeId, subId = null) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/explain-before-fix/question`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeId,
+          learnerId: activeLearnerId,
+          language: selectedLang,
+          submissionId: subId
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setEbyfQuestion(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn('[MissionSandbox] EBYF question fallback:', err.message);
+      setEbyfQuestion({
+        question: 'Identify the exact boundary condition or state where this logic deviates from expected behavior.',
+        questionType: 'explain_condition'
+      });
+    }
+  }, [activeLearnerId, selectedLang]);
+
+  // 4. Fetch Adaptive Recommendation
+  const fetchRecommendation = useCallback(async (currentId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/recommendations/${activeLearnerId}?currentChallengeId=${currentId || activeChallengeId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setRecommendation(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn('[MissionSandbox] Recommendation API standby:', err.message);
+    }
+  }, [activeLearnerId, activeChallengeId]);
+
+  // 5. Fetch Learner Progress & Telemetry
+  const fetchProgress = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/progress/${activeLearnerId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setLearnerProgress(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn('[MissionSandbox] Progress telemetry standby:', err.message);
+    }
+  }, [activeLearnerId]);
+
+  // Mount effect: load catalog and initial challenge
+  useEffect(() => {
+    fetchChallengesCatalog();
+    loadChallengeDetails(activeChallengeId, selectedLang);
+    fetchEbyfQuestion(activeChallengeId);
+    fetchRecommendation(activeChallengeId);
+    fetchProgress();
+  }, [fetchChallengesCatalog, loadChallengeDetails, fetchEbyfQuestion, fetchRecommendation, fetchProgress, activeChallengeId, selectedLang]);
+
+  // Switch challenge handler
+  const handleSelectChallenge = async (challengeId) => {
+    setActiveChallengeId(challengeId);
+    setTestResults(null);
+    setLastSubmissionId(null);
+    setUnlockedHints({});
     setExplanation('');
-    setUnlockedHints([0]);
+    setPredictedVariable('');
+    setPredictedValue('');
+    setEbyfFeedback(null);
+    setExplanationError(false);
+    setApiError(null);
+
+    await loadChallengeDetails(challengeId, selectedLang);
+    fetchEbyfQuestion(challengeId);
+    fetchRecommendation(challengeId);
+  };
+
+  // Switch language handler
+  const handleSelectLang = (lang) => {
+    setSelectedLang(lang);
+    const newCode = getStarterCode(currentChallenge, lang);
+    if (newCode) setUserCode(newCode);
     setTestResults(null);
     setExplanationError(false);
   };
 
-  // Switch language
-  const handleSelectLang = (lang) => {
-    setSelectedLang(lang);
-    setUserCode(lang === 'js' ? currentMission.jsBuggy : currentMission.javaBuggy);
-    setTestResults(null);
-  };
-
-  // Reset starter code
+  // Reset starter code handler
   const handleResetCode = () => {
-    setUserCode(selectedLang === 'js' ? currentMission.jsBuggy : currentMission.javaBuggy);
+    const freshCode = getStarterCode(currentChallenge, selectedLang);
+    setUserCode(freshCode);
     setTestResults(null);
+    setExplanationError(false);
   };
 
-  // Unlock progressive hint
-  const handleUnlockHint = (hintIndex) => {
-    if (!unlockedHints.includes(hintIndex)) {
-      setUnlockedHints(prev => [...prev, hintIndex]);
+  // Submit Code for Evaluation
+  const handleSubmitCode = async () => {
+    setApiError(null);
+    setExplanationError(false);
+
+    if (!userCode.trim()) {
+      setApiError('Submitted code cannot be empty.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/submissions`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Learner-Id': activeLearnerId
+        },
+        body: JSON.stringify({
+          challengeId: activeChallengeId,
+          language: selectedLang,
+          code: userCode,
+          explanation: explanation.trim() || undefined,
+          learnerId: activeLearnerId
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const payload = data.data || data;
+        setTestResults(payload);
+        setLastSubmissionId(payload.submissionId);
+        setActiveFeedbackTab('tests');
+
+        // Refresh learner telemetry and next challenge recommendation
+        fetchProgress();
+        fetchRecommendation(activeChallengeId);
+
+        // Fetch targeted EBYF question based on this submission
+        if (payload.status === 'failed') {
+          fetchEbyfQuestion(activeChallengeId, payload.submissionId);
+        }
+      } else {
+        const errMsg = data.error?.message || data.error || 'Submission failed. Please check your runner service.';
+        setApiError(errMsg);
+      }
+    } catch (err) {
+      console.error('[MissionSandbox] Submission error:', err);
+      setApiError('Unable to reach backend execution runner. Confirm that backend is listening on port 5000.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Run verification
-  const handleRunVerification = () => {
-    // Cognitive gate: learner must write explanation first
-    if (!explanation.trim() || explanation.trim().length < 12) {
+  // Submit EBYF Explanation
+  const handleSubmitExplanation = async (e) => {
+    if (e) e.preventDefault();
+    if (!explanation.trim() || explanation.trim().length < 5) {
       setExplanationError(true);
-      setActiveFeedbackTab('hints');
       return;
     }
 
     setExplanationError(false);
-    setIsVerifying(true);
-    setTestResults(null);
+    setIsEbyfSubmitting(true);
+    setApiError(null);
 
-    setTimeout(() => {
-      setIsVerifying(false);
-      const isFixed = currentMission.checkFix(userCode, selectedLang);
-
-      setTestResults({
-        passed: isFixed,
-        publicResults: currentMission.publicTests.map((t, idx) => ({
-          ...t,
-          status: isFixed ? 'PASSED' : idx === 0 ? 'PASSED' : 'FAILED',
-          actual: isFixed ? t.expected : (idx === 0 ? t.expected : 'NullPointerException / Off-by-one')
-        })),
-        hiddenTestStatus: isFixed ? 'PASSED' : 'FAILED'
+    try {
+      const res = await fetch(`${API_BASE}/api/explain-before-fix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionId: lastSubmissionId || undefined,
+          learnerId: activeLearnerId,
+          explanation: explanation.trim(),
+          predictedVariable: predictedVariable.trim() || undefined,
+          predictedValue: predictedValue.trim() || undefined,
+          challengeId: activeChallengeId,
+          code: userCode,
+          language: selectedLang
+        })
       });
-      setActiveFeedbackTab('tests');
-    }, 600);
+
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setEbyfFeedback(json.data);
+        setActiveFeedbackTab('ebyf');
+      } else {
+        setApiError(json.error || 'Unable to evaluate reflection at this time.');
+      }
+    } catch (err) {
+      console.warn('[MissionSandbox] EBYF submission error:', err);
+      setApiError('Explanation service currently unavailable. Please verify network connectivity.');
+    } finally {
+      setIsEbyfSubmitting(false);
+    }
+  };
+
+  // Unlock Progressive Hint
+  const handleUnlockHint = async (level) => {
+    setIsHintLoading(true);
+    setApiError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/hints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionId: lastSubmissionId || undefined,
+          hintLevel: level,
+          learnerId: activeLearnerId,
+          challengeId: activeChallengeId,
+          code: userCode,
+          language: selectedLang
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        const hintData = json.data || json;
+        setUnlockedHints(prev => ({
+          ...prev,
+          [level]: {
+            text: hintData.hint,
+            isFallback: Boolean(hintData.isFallback)
+          }
+        }));
+        setActiveFeedbackTab('hints');
+      } else {
+        setApiError(json.error || `Failed to unlock Level ${level} hint.`);
+      }
+    } catch (err) {
+      console.warn(`[MissionSandbox] Hint error:`, err);
+      setApiError(`Hint service error: ensure backend API is running.`);
+    } finally {
+      setIsHintLoading(false);
+    }
+  };
+
+  // Helper to format distinct test status badges
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case 'passed':
+        return <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><CheckCircle2 size={12} /> Passed</span>;
+      case 'wrong_output':
+        return <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}><AlertCircle size={12} /> Wrong Output</span>;
+      case 'compile_error':
+        return <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}><Terminal size={12} /> Compile Error</span>;
+      case 'runtime_error':
+        return <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(220, 38, 38, 0.15)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.4)' }}><XCircle size={12} /> Runtime Error</span>;
+      case 'timeout':
+        return <span className="badge badge-brand" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)' }}><Clock size={12} /> Timeout</span>;
+      default:
+        return <span className="badge badge-neutral">{status}</span>;
+    }
   };
 
   return (
@@ -198,25 +551,53 @@ export default function MissionSandbox() {
             <span className="hero-gradient-text">Explain Before You Fix.</span>
           </h2>
           <p className="section-subtitle">
-            No copy-pasting. Identify the bug, write your reasoning hypothesis in the cognitive gate, 
-            unlock hints progressively, and execute against both public and security-guarded hidden test suites.
+            Analyze the bug, record your hypothesis in the cognitive gate, unlock progressive hints, 
+            and execute against authentic Java and JavaScript sandbox runners.
           </p>
         </div>
+
+        {/* Global API Alert Banner if error occurs */}
+        {apiError && (
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto 1.25rem auto',
+            padding: '0.85rem 1.25rem',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <AlertCircle size={18} color="#ef4444" />
+              <span style={{ fontSize: '0.84rem', color: '#fca5a5' }}>{apiError}</span>
+            </div>
+            <button 
+              onClick={() => setApiError(null)}
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <div className="sandbox-container">
           {/* Top Bar: Mission Selector & Language Toggle */}
           <div className="sandbox-topbar">
             <div className="mission-selector-group">
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Mission:
+                Challenge:
               </span>
-              {MISSIONS.map((m, idx) => (
+              {challenges.map((c) => (
                 <button
-                  key={m.id}
-                  className={`mission-pill-btn ${activeMissionIndex === idx ? 'active' : ''}`}
-                  onClick={() => handleSelectMission(idx)}
+                  key={c.id}
+                  className={`mission-pill-btn ${activeChallengeId === c.id ? 'active' : ''}`}
+                  onClick={() => handleSelectChallenge(c.id)}
                 >
-                  {m.title}
+                  {c.title}
                 </button>
               ))}
             </div>
@@ -224,8 +605,8 @@ export default function MissionSandbox() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div className="language-switch-group">
                 <button 
-                  className={`lang-btn ${selectedLang === 'js' ? 'active' : ''}`}
-                  onClick={() => handleSelectLang('js')}
+                  className={`lang-btn ${selectedLang === 'javascript' ? 'active' : ''}`}
+                  onClick={() => handleSelectLang('javascript')}
                 >
                   JavaScript
                 </button>
@@ -240,7 +621,7 @@ export default function MissionSandbox() {
               <button 
                 onClick={handleResetCode}
                 className="btn btn-secondary btn-sm"
-                title="Reset starter buggy code"
+                title="Reset starter code"
               >
                 <RotateCcw size={13} />
                 <span>Reset</span>
@@ -254,10 +635,10 @@ export default function MissionSandbox() {
             <div className="sandbox-editor-col">
               <div className="editor-toolbar">
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {currentMission.description}
+                  {currentChallenge?.description || 'Inspect and debug the algorithm below.'}
                 </span>
-                <span className="badge badge-warning">
-                  {currentMission.category}
+                <span className="badge badge-warning" style={{ textTransform: 'uppercase', fontSize: '0.68rem' }}>
+                  {currentChallenge?.concept || currentChallenge?.difficulty || 'Practice'}
                 </span>
               </div>
 
@@ -265,7 +646,7 @@ export default function MissionSandbox() {
                 className="code-textarea"
                 value={userCode}
                 onChange={(e) => setUserCode(e.target.value)}
-                rows={14}
+                rows={16}
                 spellCheck={false}
               />
 
@@ -273,40 +654,65 @@ export default function MissionSandbox() {
               <div className="explain-gate-box">
                 <div className="explain-gate-label">
                   <Brain size={14} />
-                  <span>Explain Before You Fix (Mandatory Gate)</span>
+                  <span>Explain Before You Fix (Cognitive Gate)</span>
                 </div>
-                <input
-                  type="text"
-                  className="explain-input"
-                  placeholder="e.g., The loop accesses an index equal to array length, causing an out-of-bounds crash..."
-                  value={explanation}
-                  onChange={(e) => {
-                    setExplanation(e.target.value);
-                    if (e.target.value.trim().length >= 12) setExplanationError(false);
-                  }}
-                />
+
+                {ebyfQuestion && (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                    <strong>Prompt:</strong> {ebyfQuestion.question}
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    className="explain-input"
+                    placeholder="e.g. The loop boundary i < length - 1 stops before reaching the last array element..."
+                    value={explanation}
+                    onChange={(e) => {
+                      setExplanation(e.target.value);
+                      if (e.target.value.trim().length >= 5) setExplanationError(false);
+                    }}
+                  />
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleSubmitExplanation}
+                    disabled={isEbyfSubmitting || explanation.trim().length < 5}
+                    title="Submit hypothesis for pedagogical AI evaluation"
+                  >
+                    {isEbyfSubmitting ? <RefreshCw size={12} className="spin" /> : <Lightbulb size={13} />}
+                    <span>Reflect</span>
+                  </button>
+                </div>
+
                 {explanationError && (
-                  <p style={{ color: 'var(--status-danger)', fontSize: '0.75rem', marginTop: '0.35rem' }}>
-                    ⚠️ Please provide a clear hypothesis (at least 12 characters) explaining the bug before running tests!
+                  <p style={{ color: 'var(--status-danger)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    ⚠️ Please provide an explanation (at least 5 characters) before requesting evaluation!
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Right Column: Progressive Hints, Tests & Bug Fingerprint */}
+            {/* Right Column: Progressive Hints, Tests, EBYF & Bug Fingerprint */}
             <div className="sandbox-feedback-col">
               <div className="feedback-tabs-bar">
                 <button 
                   className={`feedback-tab-btn ${activeFeedbackTab === 'tests' ? 'active' : ''}`}
                   onClick={() => setActiveFeedbackTab('tests')}
                 >
-                  Test Results {testResults && (testResults.passed ? '✓' : '✗')}
+                  Test Results {testResults && (testResults.status === 'passed' ? '✓' : '✗')}
                 </button>
                 <button 
                   className={`feedback-tab-btn ${activeFeedbackTab === 'hints' ? 'active' : ''}`}
                   onClick={() => setActiveFeedbackTab('hints')}
                 >
-                  Progressive Hints ({unlockedHints.length}/3)
+                  Progressive Hints ({Object.keys(unlockedHints).length}/3)
+                </button>
+                <button 
+                  className={`feedback-tab-btn ${activeFeedbackTab === 'ebyf' ? 'active' : ''}`}
+                  onClick={() => setActiveFeedbackTab('ebyf')}
+                >
+                  Reasoning Feedback {ebyfFeedback && '✓'}
                 </button>
                 <button 
                   className={`feedback-tab-btn ${activeFeedbackTab === 'fingerprint' ? 'active' : ''}`}
@@ -314,10 +720,16 @@ export default function MissionSandbox() {
                 >
                   Bug Fingerprint
                 </button>
+                <button 
+                  className={`feedback-tab-btn ${activeFeedbackTab === 'adaptive' ? 'active' : ''}`}
+                  onClick={() => setActiveFeedbackTab('adaptive')}
+                >
+                  Adaptive Plan
+                </button>
               </div>
 
               <div className="feedback-content-area">
-                {/* Tab 1: Test Results */}
+                {/* TAB 1: Test Results */}
                 {activeFeedbackTab === 'tests' && (
                   <div>
                     {!testResults ? (
@@ -325,13 +737,22 @@ export default function MissionSandbox() {
                         <Play size={28} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
                         <p style={{ fontSize: '0.88rem', fontWeight: 500 }}>No test runs executed yet.</p>
                         <p style={{ fontSize: '0.78rem', marginTop: '0.35rem' }}>
-                          Edit the code, type your explanation, and click <strong>Verify & Run Tests</strong> below.
+                          Edit your code, write your hypothesis, and click <strong>Verify & Run Tests</strong> below.
                         </p>
                       </div>
                     ) : (
                       <div className="test-results-group">
-                        {testResults.passed ? (
-                          <div style={{ padding: '0.85rem 1rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                        {testResults.status === 'passed' ? (
+                          <div style={{
+                            padding: '0.85rem 1rem',
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.5rem'
+                          }}>
                             <Award size={20} color="#10b981" />
                             <div>
                               <strong style={{ fontSize: '0.85rem', color: '#10b981' }}>Mission Completed!</strong>
@@ -339,76 +760,104 @@ export default function MissionSandbox() {
                             </div>
                           </div>
                         ) : (
-                          <div style={{ padding: '0.85rem 1rem', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                          <div style={{
+                            padding: '0.85rem 1rem',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.5rem'
+                          }}>
                             <AlertCircle size={20} color="#ef4444" />
                             <div>
-                              <strong style={{ fontSize: '0.85rem', color: '#ef4444' }}>Edge-case Failure Detected</strong>
-                              <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Review your boundary condition or consult the progressive hint ladder.</p>
+                              <strong style={{ fontSize: '0.85rem', color: '#ef4444' }}>Execution Failure Detected</strong>
+                              <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                                {testResults.feedback?.summary || 'Review your boundary conditions, runtime traces, or consult the progressive hint ladder.'}
+                              </p>
                             </div>
                           </div>
                         )}
 
-                        {testResults.publicResults.map((t, idx) => (
-                          <div key={idx} className={`test-case-card ${t.status === 'PASSED' ? 'pass' : 'fail'}`}>
-                            <div className="test-case-header">
-                              <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Public Test #{idx + 1}</span>
-                              <span className={`badge ${t.status === 'PASSED' ? 'badge-success' : 'badge-danger'}`}>
-                                {t.status}
-                              </span>
-                            </div>
-                            <div className="test-details-grid">
-                              <div><strong>Input:</strong> {t.input}</div>
-                              <div><strong>Expected:</strong> {t.expected}</div>
-                              <div><strong>Actual:</strong> {t.actual}</div>
-                            </div>
-                          </div>
-                        ))}
+                        {/* Individual Test Cards */}
+                        {Array.isArray(testResults.results) && testResults.results.map((t, idx) => {
+                          const isHidden = t.visibility === 'hidden';
 
-                        {/* Hidden Test Case Card (Security rule: Never expose inputs/outputs!) */}
-                        <div className={`test-case-card ${testResults.hiddenTestStatus === 'PASSED' ? 'pass' : 'fail'}`}>
-                          <div className="test-case-header">
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <Shield size={13} color="var(--brand-light)" />
-                              <span>Hidden Edge-Case Suite</span>
-                            </span>
-                            <span className={`badge ${testResults.hiddenTestStatus === 'PASSED' ? 'badge-success' : 'badge-danger'}`}>
-                              {testResults.hiddenTestStatus}
-                            </span>
-                          </div>
-                          <div className="hidden-test-shield">
-                            <Lock size={12} />
-                            <span>Hidden test payload and expected value are securely obfuscated per CodeDNA sandbox rules.</span>
-                          </div>
-                        </div>
+                          if (isHidden) {
+                            return (
+                              <div key={idx} className={`test-case-card ${t.status === 'passed' ? 'pass' : 'fail'}`}>
+                                <div className="test-case-header">
+                                  <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <Shield size={13} color="var(--brand-light)" />
+                                    <span>Hidden Test Suite ({t.testId})</span>
+                                  </span>
+                                  {renderStatusBadge(t.status)}
+                                </div>
+                                <div className="hidden-test-shield">
+                                  <Lock size={12} />
+                                  <span>Hidden inputs and expected values are securely obfuscated per CodeDNA sandbox rules.</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={idx} className={`test-case-card ${t.status === 'passed' ? 'pass' : 'fail'}`}>
+                              <div className="test-case-header">
+                                <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>Public Test #{idx + 1} ({t.testId})</span>
+                                {renderStatusBadge(t.status)}
+                              </div>
+                              <div className="test-details-grid">
+                                {t.expected !== undefined && <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{t.expected}</span></div>}
+                                {t.actual !== undefined && <div><strong>Actual:</strong> <span style={{ color: t.status === 'passed' ? '#a7f3d0' : '#fca5a5' }}>{t.actual || '(no stdout)'}</span></div>}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Tab 2: Progressive Hint Ladder */}
+                {/* TAB 2: Progressive Hints */}
                 {activeFeedbackTab === 'hints' && (
                   <div className="hint-ladder-group">
-                    {currentMission.hints.map((hint, idx) => {
-                      const isUnlocked = unlockedHints.includes(idx);
+                    {[1, 2, 3].map((tier) => {
+                      const hintObj = unlockedHints[tier];
+                      const isUnlocked = Boolean(hintObj);
+                      const tierTitles = {
+                        1: 'Conceptual Nudge',
+                        2: 'Logic & Index Pointer',
+                        3: 'Targeted Debugging Direction'
+                      };
+
                       return (
-                        <div key={idx} className={`hint-card ${isUnlocked ? 'unlocked' : ''}`}>
+                        <div key={tier} className={`hint-card ${isUnlocked ? 'unlocked' : ''}`}>
                           <div className="hint-header">
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                               {isUnlocked ? <Unlock size={14} color="#10b981" /> : <Lock size={14} color="#64748b" />}
-                              <span>Tier {hint.tier} : {hint.title}</span>
+                              <span>Level {tier} : {tierTitles[tier]}</span>
+                              {isUnlocked && hintObj.isFallback && (
+                                <span className="badge badge-neutral" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>Curated</span>
+                              )}
+                              {isUnlocked && !hintObj.isFallback && (
+                                <span className="badge badge-brand" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>AI Powered</span>
+                              )}
                             </span>
                             {!isUnlocked && (
                               <button 
-                                onClick={() => handleUnlockHint(idx)}
+                                onClick={() => handleUnlockHint(tier)}
+                                disabled={isHintLoading}
                                 className="btn btn-secondary btn-sm"
                                 style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
                               >
-                                Unlock Hint
+                                {isHintLoading ? 'Loading...' : `Unlock Level ${tier}`}
                               </button>
                             )}
                           </div>
                           <p className="hint-text">
-                            {isUnlocked ? hint.text : 'Click "Unlock Hint" to reveal conceptual assistance without spoiling the direct solution.'}
+                            {isUnlocked ? hintObj.text : 'Click Unlock Level to reveal progressive assistance without spoiling the direct solution.'}
                           </p>
                         </div>
                       );
@@ -416,46 +865,153 @@ export default function MissionSandbox() {
                   </div>
                 )}
 
-                {/* Tab 3: Bug Fingerprint */}
+                {/* TAB 3: Reasoning Feedback (EBYF) */}
+                {activeFeedbackTab === 'ebyf' && (
+                  <div>
+                    {!ebyfFeedback ? (
+                      <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                        <Brain size={28} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
+                        <p style={{ fontSize: '0.88rem', fontWeight: 500 }}>No reasoning submitted yet.</p>
+                        <p style={{ fontSize: '0.78rem', marginTop: '0.35rem' }}>
+                          Type your hypothesis in the cognitive gate and click <strong>Reflect</strong> to evaluate your understanding.
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        <div style={{ 
+                          padding: '1rem', 
+                          background: ebyfFeedback.evaluation === 'correct' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                          border: `1px solid ${ebyfFeedback.evaluation === 'correct' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                          borderRadius: 'var(--radius-md)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                            <strong style={{ fontSize: '0.85rem', color: ebyfFeedback.evaluation === 'correct' ? '#10b981' : '#60a5fa' }}>
+                              Evaluation: {ebyfFeedback.evaluation?.toUpperCase() || 'EVALUATED'}
+                            </strong>
+                            <span className="badge badge-brand" style={{ fontSize: '0.65rem' }}>
+                              {ebyfFeedback.isFallback ? 'Pedagogical Heuristic' : 'Gemini AI Evaluator'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                            {ebyfFeedback.feedback}
+                          </p>
+                        </div>
+
+                        {ebyfFeedback.understoodCorrectly && (
+                          <div className="test-case-card pass">
+                            <strong style={{ fontSize: '0.76rem', color: 'var(--status-success)' }}>What You Understood Correctly:</strong>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              {ebyfFeedback.understoodCorrectly}
+                            </p>
+                          </div>
+                        )}
+
+                        {ebyfFeedback.toReconsider && (
+                          <div className="test-case-card fail">
+                            <strong style={{ fontSize: '0.76rem', color: 'var(--status-warning)' }}>Points to Reconsider:</strong>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              {ebyfFeedback.toReconsider}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: Bug Fingerprint */}
                 {activeFeedbackTab === 'fingerprint' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ padding: '1rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
                       <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 700 }}>
-                        Current Diagnostic Pattern
+                        Current Diagnostic Classification
                       </span>
                       <h4 style={{ fontSize: '1rem', marginTop: '0.35rem', color: 'var(--cyan-accent)' }}>
-                        {currentMission.fingerprintTag}
+                        {testResults?.fingerprint?.category 
+                          ? testResults.fingerprint.category.replace(/_/g, ' ').toUpperCase()
+                          : currentChallenge?.concept?.replace(/_/g, ' ').toUpperCase() || 'INDEX BOUNDARY ANALYSIS'}
                       </h4>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
-                        CodeDNA tracks recurring mistake patterns over time to recommend targeted exercises instead of passive repetition.
+                        {testResults?.feedback?.suggestion || 'CodeDNA identifies recurring structural patterns in failure traces to optimize deliberate practice.'}
                       </p>
+                      {testResults?.fingerprint?.evidence && (
+                        <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#94a3b8' }}>
+                          Evidence: {testResults.fingerprint.evidence}
+                        </div>
+                      )}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                        <span>Index Bounds & Off-by-One</span>
-                        <strong style={{ color: 'var(--brand-light)' }}>42% Frequency</strong>
-                      </div>
-                      <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: '42%' }}></div>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        Recorded Mistake Frequencies (Learner Telemetry):
+                      </span>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                        <span>Null Pointer / Guard Omission</span>
-                        <strong style={{ color: 'var(--purple-accent)' }}>28% Frequency</strong>
-                      </div>
-                      <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: '28%', background: 'linear-gradient(135deg, #8b5cf6, #ec4899)' }}></div>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                        <span>Type Coercion & Strict Equality</span>
-                        <strong style={{ color: 'var(--status-success)' }}>15% Frequency</strong>
-                      </div>
-                      <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: '15%', background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}></div>
-                      </div>
+                      {learnerProgress?.recurringMistakes && learnerProgress.recurringMistakes.length > 0 ? (
+                        learnerProgress.recurringMistakes.map((m, idx) => (
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                              <span>{m.patternKey.replace(/_/g, ' ')}</span>
+                              <strong style={{ color: 'var(--brand-light)' }}>{m.count} occurrence{m.count > 1 ? 's' : ''}</strong>
+                            </div>
+                            <div className="progress-bar-wrap">
+                              <div className="progress-bar-fill" style={{ width: `${Math.min(100, m.count * 25)}%` }}></div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                            <span>Loop Boundary & Off-by-One</span>
+                            <strong style={{ color: 'var(--brand-light)' }}>Active tracking</strong>
+                          </div>
+                          <div className="progress-bar-wrap">
+                            <div className="progress-bar-fill" style={{ width: '40%' }}></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  </div>
+                )}
+
+                {/* TAB 5: Adaptive Plan */}
+                {activeFeedbackTab === 'adaptive' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {recommendation ? (
+                      <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <span className="badge badge-brand" style={{ fontSize: '0.7rem' }}>
+                            Strategy: {recommendation.strategy?.replace(/_/g, ' ')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            Learner: {activeLearnerId}
+                          </span>
+                        </div>
+
+                        <h4 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                          Next Recommended: {recommendation.challenge?.title || 'Reverse a String'}
+                        </h4>
+
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.45 }}>
+                          {recommendation.reason || 'Recommended based on your recurring mistake patterns to solidify fundamentals.'}
+                        </p>
+
+                        {recommendation.challenge?.id && recommendation.challenge.id !== activeChallengeId && (
+                          <button
+                            onClick={() => handleSelectChallenge(recommendation.challenge.id)}
+                            className="btn btn-primary btn-sm"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                          >
+                            <span>Switch to This Mission</span>
+                            <ArrowRight size={13} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
+                        <Compass size={24} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+                        <p style={{ fontSize: '0.84rem' }}>Generating adaptive recommendation...</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -466,21 +1022,23 @@ export default function MissionSandbox() {
           <div className="sandbox-bottom-bar">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span className="badge badge-neutral">
-                Language: {selectedLang.toUpperCase()}
+                Target: {selectedLang.toUpperCase()}
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {explanation.trim().length >= 12 ? '✓ Hypothesis recorded' : '• Hypothesis required in cognitive gate'}
+                {explanation.trim().length >= 5 ? '✓ Hypothesis recorded' : '• Hypothesis in cognitive gate recommended before tests'}
               </span>
             </div>
 
-            <button 
-              className="btn btn-primary"
-              onClick={handleRunVerification}
-              disabled={isVerifying}
-            >
-              <Play size={15} />
-              <span>{isVerifying ? 'Verifying Sandboxed Code...' : 'Verify & Run Tests'}</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-primary"
+                onClick={handleSubmitCode}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}
+                <span>{isSubmitting ? 'Evaluating Sandboxed Code...' : 'Verify & Run Tests'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

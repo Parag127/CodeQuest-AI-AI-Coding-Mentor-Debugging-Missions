@@ -59,6 +59,10 @@ export const store = {
     return ebyfRecords.get(`${learnerId}:${submissionId}`) || null;
   },
 
+  getEbyfByLearner(learnerId) {
+    return Array.from(ebyfRecords.values()).filter(r => r.learnerId === learnerId);
+  },
+
   // Hints
   saveHintHistory(record) {
     const entry = {
@@ -94,13 +98,16 @@ export const store = {
   saveBugFingerprints(records) {
     for (const rec of records) {
       bugFingerprints.push({
-        id: `bf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: rec.id || `bf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         learnerId: rec.learnerId,
         challengeId: rec.challengeId,
         submissionId: rec.submissionId,
         patternKey: rec.patternKey,
         language: rec.language,
-        detectedAt: new Date().toISOString()
+        confidence: rec.confidence || 'high',
+        evidence: rec.evidence || null,
+        isConfirmed: rec.isConfirmed !== undefined ? Boolean(rec.isConfirmed) : (rec.confidence === 'high'),
+        detectedAt: rec.detectedAt || new Date().toISOString()
       });
     }
   },
@@ -157,14 +164,24 @@ export const store = {
     });
 
     const learnerMistakes = this.getBugFingerprintsByLearner(learnerId);
-    const patternCountMap = {};
+    const patternMap = {};
     for (const item of learnerMistakes) {
-      patternCountMap[item.patternKey] = (patternCountMap[item.patternKey] || 0) + 1;
+      if (!patternMap[item.patternKey]) {
+        patternMap[item.patternKey] = { count: 0, confirmedCount: 0, possibleCount: 0 };
+      }
+      patternMap[item.patternKey].count += 1;
+      if (item.isConfirmed || item.confidence === 'high') {
+        patternMap[item.patternKey].confirmedCount += 1;
+      } else {
+        patternMap[item.patternKey].possibleCount += 1;
+      }
     }
 
-    const recurringMistakes = Object.entries(patternCountMap).map(([patternKey, count]) => ({
+    const recurringMistakes = Object.entries(patternMap).map(([patternKey, data]) => ({
       patternKey,
-      count
+      count: data.count,
+      confirmedCount: data.confirmedCount,
+      possibleCount: data.possibleCount
     }));
 
     return {

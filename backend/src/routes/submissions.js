@@ -2,7 +2,8 @@ import express from 'express';
 import crypto from 'crypto';
 import db from '../db/index.js';
 import { executeSubmission, isRunnerConfigured, STATUS } from '../services/judgeService.js';
-import { classifyBugFingerprint } from '../services/bugFingerprintService.js';
+import { classifyBugFingerprint } from '../services/bugFingerprint.js';
+import { store } from '../data/store.js';
 import { parseLanguages } from '../models/challengeModel.js';
 
 const router = express.Router();
@@ -223,12 +224,14 @@ router.post('/', async (req, res) => {
     const overallStatus = failCount === 0 ? 'passed' : 'failed';
 
     // 8. Analyze Bug Fingerprint
-    const { detectedPatterns, feedback } = classifyBugFingerprint({
+    const fingerprintResult = classifyBugFingerprint({
       code,
       language,
       testResults: internalResults,
       concept: challenge.concept
     });
+    const detectedPatterns = fingerprintResult.detectedPatterns || [];
+    const feedback = fingerprintResult.feedback;
 
     // 9. Persist Submission & Results in Database (Wrapped in transaction)
     const saveSubmission = db.transaction(() => {
@@ -274,8 +277,8 @@ router.post('/', async (req, res) => {
       // Insert detected bug fingerprints
       const insertFingerprint = db.prepare(`
         INSERT INTO bug_fingerprints (
-          id, learner_id, challenge_id, submission_id, pattern_key, language
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          id, learner_id, challenge_id, submission_id, pattern_key, language, confidence, evidence, is_confirmed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const pattern of detectedPatterns) {
@@ -285,7 +288,26 @@ router.post('/', async (req, res) => {
           challengeId,
           submissionId,
           pattern,
-          language
+          language,
+          fingerprintResult.confidence || 'high',
+          fingerprintResult.evidence || null,
+          fingerprintResult.isConfirmed ? 1 : 0
+        );
+      }
+
+      // Sync into in-memory store for adaptive recommendations and progress tracking
+      if (detectedPatterns.length > 0) {
+        store.saveBugFingerprints(
+          detectedPatterns.map(pattern => ({
+            learnerId,
+            challengeId,
+            submissionId,
+            patternKey: pattern,
+            language,
+            confidence: fingerprintResult.confidence || 'high',
+            evidence: fingerprintResult.evidence || null,
+            isConfirmed: Boolean(fingerprintResult.isConfirmed)
+          }))
         );
       }
 
@@ -310,12 +332,26 @@ router.post('/', async (req, res) => {
 
     saveSubmission();
 
-    // 10. Return Response per API_CONTRACT.md
-    res.json({
+    // 10. Return Response per API_CONTRACT.md (Dual compatibility for root and data wrappers)
+    const responseData = {
       submissionId,
       status: overallStatus,
       results,
-      feedback
+      feedback,
+      bugFingerprints: detectedPatterns,
+      fingerprint: fingerprintResult.category !== 'unknown' ? {
+        category: fingerprintResult.category,
+        confidence: fingerprintResult.confidence,
+        isConfirmed: fingerprintResult.isConfirmed,
+        reason: fingerprintResult.reason,
+        evidence: fingerprintResult.evidence
+      } : null
+    };
+
+    res.json({
+      success: true,
+      data: responseData,
+      ...responseData
     });
 
   } catch (error) {
