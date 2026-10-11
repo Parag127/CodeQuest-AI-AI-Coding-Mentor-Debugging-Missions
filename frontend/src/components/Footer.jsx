@@ -12,7 +12,7 @@ export default function Footer({ backendStatus, onNavigateLogin }) {
               <div className="brand-icon-box" style={{ width: '32px', height: '32px' }}>
                 <Layers size={18} />
               </div>
-              <span>CodeQuest <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
+              <span>DebugMate <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
             </div>
 
             <p className="footer-tagline">
@@ -80,7 +80,7 @@ export default function Footer({ backendStatus, onNavigateLogin }) {
         {/* Footer Bottom Bar */}
         <div className="footer-bottom-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>&copy; {new Date().getFullYear()} CodeQuest AI &bull; D.Y. Patil Hackathon Starter.</span>
+            <span>&copy; {new Date().getFullYear()} DebugMate &bull; D.Y. Patil Hackathon Starter.</span>
             <span style={{ color: 'var(--text-muted)' }}>All rights reserved.</span>
           </div>
 

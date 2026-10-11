@@ -125,7 +125,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <Layers size={22} />
           </div>
           <h2 className="auth-title">
-            {authMode === 'login' ? 'Sign In to CodeQuest' : 'Create Free Account'}
+            {authMode === 'login' ? 'Sign In to DebugMate' : 'Create Free Account'}
           </h2>
           <p className="auth-subtitle">
             {authMode === 'login' 
@@ -275,7 +275,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
             disabled={isLoading}
           >
-            <span>{isLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In to CodeQuest' : 'Create Account'}</span>
+            <span>{isLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In to DebugMate' : 'Create Account'}</span>
             <ArrowRight size={16} />
           </button>
         </form>

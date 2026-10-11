@@ -1,7 +1,7 @@
-# MVP Scope — CodeQuest AI & CodeDNA
+# MVP Scope — DebugMate & CodeDNA
 
 ## Overview
-CodeQuest AI (CodeDNA) is a beginner-friendly programming practice platform focused on learning to **debug**, rather than copying pre-generated AI solutions.
+DebugMate (CodeDNA) is a beginner-friendly programming practice platform focused on learning to **debug**, rather than copying pre-generated AI solutions.
 
 ---
 

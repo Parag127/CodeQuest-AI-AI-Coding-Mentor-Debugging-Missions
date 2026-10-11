@@ -1,4 +1,4 @@
-# 🚀 CodeQuest AI & CodeDNA — AI Debugging Missions & Containerized Telemetry
+# 🚀 DebugMate — AI Debugging Missions & Containerized Telemetry
 
 A production-grade, containerized full-stack application built for the **D.Y. Patil Hackathon 2026**. Features an Express.js REST API backend, a Vite + React frontend styled after **Skilotech's modern engineering platform** (floating island navbar, ambient mesh glows, interactive macOS IDE, and live browser console), and a complete **CodeDNA** debugging lab with Java/JS parity, progressive hints, and cognitive explanation gates.
 

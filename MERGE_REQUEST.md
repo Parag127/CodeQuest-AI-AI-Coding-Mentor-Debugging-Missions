@@ -2,7 +2,7 @@
 
 **To**: Team Leader / Lead Reviewer  
 **From**: Frontend & Full-Stack Development Team  
-**Project**: CodeQuest AI (D.Y. Patil Hackathon 2026)  
+**Project**: DebugMate (D.Y. Patil Hackathon 2026)  
 **Branch**: `frontend` &rarr; `main`  
 **Status**: Ready for Review & Verification ✅  
 **Commit Reference**: [`d395ad5`](https://github.com/Parag127/CodeQuest-AI-AI-Coding-Mentor-Debugging-Missions/commit/d395ad5)  
@@ -12,7 +12,7 @@
 
 ## 📌 Executive Summary
 
-This Merge Request delivers the complete, production-grade frontend architecture and microservice integration for **CodeQuest AI** (CodeDNA), adhering to the **Skilotech-inspired design system** requested for the D.Y. Patil Hackathon.
+This Merge Request delivers the complete, production-grade frontend architecture and microservice integration for **DebugMate** (CodeDNA), adhering to the **Skilotech-inspired design system** requested for the D.Y. Patil Hackathon.
 
 It replaces static placeholders with a dynamic, dual-theme debugging practice ecosystem featuring an interactive CodeDNA sandbox, progressive hint ladder, "Explain Before You Fix" cognitive hypothesis gate, live system telemetry, and a full-screen dedicated authentication portal.
 
@@ -22,7 +22,7 @@ It replaces static placeholders with a dynamic, dual-theme debugging practice ec
 
 ### 1. Skilotech Design System & Dual-Theme Engine
 * **Themes**: Seamless switching between **Midnight Cyber 🌙** and **Studio Canvas ☀️** with `localStorage` persistence.
-* **Aesthetics**: Floating glass island navbar, typographic background watermark (`CODEQUEST`), ambient glowing mesh orbs, and chapter hairline dividers.
+* **Aesthetics**: Floating glass island navbar, typographic background watermark (`DEBUGMATE`), ambient glowing mesh orbs, and chapter hairline dividers.
 * **Tech Marquee**: Infinite hardware & framework marquee with gradient edge masks.
 
 ### 2. CodeDNA Debugging Sandbox (`frontend/src/components/MissionSandbox.jsx`)

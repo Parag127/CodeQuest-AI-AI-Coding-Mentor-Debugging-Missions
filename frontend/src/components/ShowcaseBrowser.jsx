@@ -93,7 +93,7 @@ export default function ShowcaseBrowser({
             <div className="browser-url-pill">
               <Globe size={13} style={{ color: 'var(--brand-light)' }} />
               <span>
-                https://codequest.dy-patil.internal/api/{activeTab === 'telemetry' ? 'health' : activeTab === 'crud' ? 'items' : 'orchestration'}
+                https://debugmate.dy-patil.internal/api/{activeTab === 'telemetry' ? 'health' : activeTab === 'crud' ? 'items' : 'orchestration'}
               </span>
             </div>
 

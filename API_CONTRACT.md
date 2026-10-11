@@ -1,4 +1,4 @@
-# API Contract — CodeQuest AI & CodeDNA
+# API Contract — DebugMate & CodeDNA
 
 This document defines the interface between the frontend client and the backend services.
 

@@ -17,12 +17,12 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('codequest_theme') || 'dark';
+    return localStorage.getItem('debugmate_theme') || localStorage.getItem('codequest_theme') || 'dark';
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('codequest_user');
+      const stored = localStorage.getItem('debugmate_user') || localStorage.getItem('codequest_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -77,7 +77,7 @@ export default function App() {
   // Sync theme with document root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('codequest_theme', theme);
+    localStorage.setItem('debugmate_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -86,11 +86,12 @@ export default function App() {
 
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
-    localStorage.setItem('codequest_user', JSON.stringify(user));
+    localStorage.setItem('debugmate_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('debugmate_user');
     localStorage.removeItem('codequest_user');
   };
 
@@ -124,7 +125,7 @@ export default function App() {
         memoryUsageMB: { rss: 42, heapTotal: 34, heapUsed: 19 }
       });
       setInfo({
-        hostname: 'codequest-local-dev',
+        hostname: 'debugmate-local-dev',
         platform: 'node',
         arch: 'x64',
         nodeVersion: 'v20.x',

@@ -38,7 +38,7 @@ export default function Navbar({
             <Layers size={20} />
           </div>
           <div>
-            <span>CodeQuest</span>
+            <span>DebugMate</span>
             <span style={{ color: 'var(--brand-light)', marginLeft: '3px', fontSize: '0.82rem', fontWeight: 600 }}>
               AI
             </span>
@@ -111,7 +111,7 @@ export default function Navbar({
             <button 
               className="btn btn-secondary btn-sm"
               onClick={onNavigateLogin || onOpenAuthModal}
-              title="Sign In to CodeQuest AI"
+              title="Sign In to DebugMate"
             >
               <LogIn size={14} />
               <span>Sign In</span>

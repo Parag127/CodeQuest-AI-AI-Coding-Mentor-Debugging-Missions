@@ -45,7 +45,7 @@ public static int[] findTargetPair(int[] arr, int target) {
     <section id="hero" className="hero-section">
       {/* Background Typographic Watermark (Skilotech signature) */}
       <div className="hero-watermark">
-        CODEQUEST
+        DEBUGMATE
       </div>
 
       <div className="container">

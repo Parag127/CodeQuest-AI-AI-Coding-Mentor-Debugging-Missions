@@ -153,7 +153,7 @@ export default function LoginPage({
             title="Return to Main Workspace"
           >
             <ArrowLeft size={16} />
-            <span>Back to CodeQuest</span>
+            <span>Back to DebugMate</span>
           </button>
 
           {/* Center Brand */}
@@ -161,7 +161,7 @@ export default function LoginPage({
             <div className="brand-icon-box" style={{ width: '32px', height: '32px' }}>
               <Layers size={18} />
             </div>
-            <span>CodeQuest <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
+            <span>DebugMate <span style={{ color: 'var(--brand-light)' }}>AI</span></span>
           </div>
 
           {/* Status & Theme Toggle */}
@@ -221,7 +221,7 @@ export default function LoginPage({
                 </div>
                 <div className="login-terminal-title">
                   <Terminal size={13} style={{ marginRight: '5px' }} />
-                  <span>codequest-sandbox-daemon v2.4</span>
+                  <span>debugmate-sandbox-daemon v2.4</span>
                 </div>
                 <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
                   ACTIVE
@@ -230,7 +230,7 @@ export default function LoginPage({
               <div className="login-terminal-body">
                 <div className="terminal-line">
                   <span className="term-prompt">$</span> 
-                  <span className="term-cmd">codequest auth:verify --session=dy-patil-2026</span>
+                  <span className="term-cmd">debugmate auth:verify --session=dy-patil-2026</span>
                 </div>
                 <div className="terminal-line term-output text-cyan">
                   [OK] Zero-Trust Non-Root Container: READY (UID 1001)
@@ -289,7 +289,7 @@ export default function LoginPage({
             {/* Hackathon Mentor Testimonial */}
             <div className="login-quote-card">
               <p className="login-quote-text">
-                "CodeQuest AI redefines how students practice: instead of copying code from LLMs, learners 
+                "DebugMate redefines how students practice: instead of copying code from LLMs, learners 
                 diagnose and fix bugs systematically with verifiable container security."
               </p>
               <div className="login-quote-author">
@@ -323,7 +323,7 @@ export default function LoginPage({
                 <p className="login-card-subtitle">
                   {authMode === 'login'
                     ? 'Enter your credentials or choose a 1-click demo role below.'
-                    : 'Join CodeQuest AI for the D.Y. Patil Hackathon practice round.'}
+                    : 'Join DebugMate for the D.Y. Patil Hackathon practice round.'}
                 </p>
               </div>
 
@@ -519,7 +519,7 @@ export default function LoginPage({
                     {isLoading 
                       ? 'Authenticating...' 
                       : authMode === 'login' 
-                        ? 'Sign In to CodeQuest' 
+                        ? 'Sign In to DebugMate' 
                         : 'Create Free Account & Start'}
                   </span>
                   <ArrowRight size={16} />
