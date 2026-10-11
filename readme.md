@@ -65,26 +65,26 @@ docker compose down
 
 ## 💻 Running Locally (Without Docker)
 
-You can also run both services directly on your host machine using Node.js:
+You can run both the frontend and backend directly on your host machine using Node.js:
 
 ### 1. Install Dependencies
 ```bash
+npm install
 npm run install:all
 ```
 
-### 2. Start Backend
-In terminal 1:
+### 2. Start Both Services Together (Recommended)
+Run both backend and frontend concurrently in a single terminal:
 ```bash
-npm run dev:backend
-# API starts at http://localhost:5000
+npm run dev
 ```
+- **Frontend App**: Open [http://localhost:5173](http://localhost:5173)
+- **Backend API**: Running at [http://localhost:5000](http://localhost:5000)
+- **Health Check**: Open [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
-### 3. Start Frontend
-In terminal 2:
-```bash
-npm run dev:frontend
-# Vite dev server starts at http://localhost:5173
-```
+*(Optional)* Or run them independently in separate terminals:
+- **Terminal 1 (Backend)**: `npm run dev:backend`
+- **Terminal 2 (Frontend)**: `npm run dev:frontend`
 
 ---
 
