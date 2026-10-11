@@ -8,6 +8,7 @@
  * - Enforces wall-clock, CPU, and memory limits via the isolated runner.
  * - Protects hidden test inputs and expected outputs.
  */
+import vm from 'node:vm';
 
 // Judge0 Language IDs
 export const LANGUAGE_IDS = {
@@ -350,7 +351,7 @@ export async function executeSubmission({ language, code, stdin = '', expectedOu
  * and fallback testing when JUDGE0_MOCK_RUNNER=true.
  */
 export function executeMockSubmission({ language, code, stdin = '', expectedOutput = null }) {
-  // 1. Syntax / Compilation error simulation
+  // 1. Syntax / Compilation error simulation & static AST analysis
   if (code.includes('syntax_error_test') || code.includes('SYNTAX_ERROR')) {
     return {
       status: STATUS.COMPILE_ERROR,
@@ -361,6 +362,46 @@ export function executeMockSubmission({ language, code, stdin = '', expectedOutp
       timeMs: 12,
       memoryKb: 1024
     };
+  }
+
+  // Real static syntax analysis for JavaScript (AST parse without executing untrusted learner code)
+  if (language === 'javascript') {
+    try {
+      new vm.Script(code);
+    } catch (syntaxErr) {
+      const errLines = (syntaxErr.stack || syntaxErr.message).split('\n');
+      const cleanErr = errLines.slice(0, 3).join('\n');
+      return {
+        status: STATUS.COMPILE_ERROR,
+        judgeStatusId: 6,
+        judgeStatusDescription: 'Compilation Error',
+        stdout: null,
+        stderr: cleanErr || syntaxErr.message,
+        timeMs: 8,
+        memoryKb: 1024
+      };
+    }
+  }
+
+  // Real basic syntax checking for Java
+  if (language === 'java') {
+    const openBraces = (code.match(/\{/g) || []).length;
+    const closeBraces = (code.match(/\}/g) || []).length;
+    const openParens = (code.match(/\(/g) || []).length;
+    const closeParens = (code.match(/\)/g) || []).length;
+    if (openBraces !== closeBraces || openParens !== closeParens) {
+      return {
+        status: STATUS.COMPILE_ERROR,
+        judgeStatusId: 6,
+        judgeStatusDescription: 'Compilation Error',
+        stdout: null,
+        stderr: openBraces !== closeBraces
+          ? `Main.java: error: reached end of file while parsing (unmatched braces: ${openBraces} '{' vs ${closeBraces} '}')`
+          : 'Main.java: error: unmatched parentheses in statement',
+        timeMs: 10,
+        memoryKb: 1024
+      };
+    }
   }
 
   // 2. Timeout simulation

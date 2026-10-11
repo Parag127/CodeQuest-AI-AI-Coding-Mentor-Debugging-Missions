@@ -625,6 +625,14 @@ export default function PracticePage({
   const lineCount = userCode.split('\n').length;
   const lineNumbers = Array.from({ length: Math.max(lineCount, 15) }, (_, i) => i + 1);
 
+  const hasCompileError = Boolean(
+    testResults?.results?.some(t => t.status === 'compile_error') || 
+    testResults?.fingerprint?.category === 'syntax_error' ||
+    testResults?.status === 'compile_error'
+  );
+  const compileErrorText = testResults?.results?.find(t => t.stderr)?.stderr || 
+    (hasCompileError && testResults?.fingerprint?.evidence ? testResults.fingerprint.evidence : null);
+
   return (
     <div className="practice-page-root">
       {/* 1. Dedicated IDE Navigation Bar */}
@@ -715,17 +723,28 @@ export default function PracticePage({
             <span>Reset</span>
           </button>
 
-          {/* Run Tests CTA */}
+          {/* Quick Run Tests CTA */}
           <button 
             onClick={handleSubmitCode}
             disabled={isSubmitting}
-            className="btn btn-primary btn-sm"
-            style={{ fontWeight: 700 }}
-            title="Run tests (Ctrl + Enter)"
+            className="btn btn-secondary btn-sm"
+            title="Run test suite against visible test cases"
           >
-            {isSubmitting ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}
-            <span>{isSubmitting ? 'Evaluating...' : 'Verify & Run Tests'}</span>
-            <span style={{ fontSize: '0.65rem', opacity: 0.8, background: 'rgba(0,0,0,0.25)', padding: '0.1rem 0.35rem', borderRadius: '3px' }}>
+            {isSubmitting ? <RefreshCw size={13} className="spin" /> : <Play size={13} />}
+            <span>Run Tests</span>
+          </button>
+
+          {/* Dedicated Submit Solution CTA */}
+          <button 
+            onClick={handleSubmitCode}
+            disabled={isSubmitting}
+            className="btn btn-submit btn-sm"
+            style={{ fontWeight: 700 }}
+            title="Submit code for full evaluation & Bug Fingerprint recording (Ctrl + Enter)"
+          >
+            {isSubmitting ? <RefreshCw size={14} className="spin" /> : <CheckCircle2 size={14} />}
+            <span>Submit</span>
+            <span style={{ fontSize: '0.62rem', opacity: 0.85, background: 'rgba(0,0,0,0.25)', padding: '0.1rem 0.35rem', borderRadius: '3px' }}>
               Ctrl+↵
             </span>
           </button>
@@ -859,6 +878,53 @@ export default function PracticePage({
                 placeholder="Enter or debug your solution here..."
               />
             </div>
+
+            {/* Bottom Editor Action Toolbar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.5rem 0.85rem',
+              borderTop: '1px solid var(--border-primary)',
+              background: 'rgba(15, 23, 42, 0.45)',
+              borderBottomLeftRadius: 'var(--radius-md)',
+              borderBottomRightRadius: 'var(--radius-md)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                <span>Shortcuts: <kbd style={{ padding: '0.1rem 0.3rem', background: 'var(--bg-glass)', borderRadius: '3px', border: '1px solid var(--border-primary)' }}>Tab</kbd> indent &bull; <kbd style={{ padding: '0.1rem 0.3rem', background: 'var(--bg-glass)', borderRadius: '3px', border: '1px solid var(--border-primary)' }}>Ctrl+Enter</kbd> submit</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button 
+                  onClick={handleResetCode} 
+                  className="btn btn-secondary btn-sm"
+                  title="Reset to starter template"
+                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+                <button 
+                  onClick={handleSubmitCode}
+                  disabled={isSubmitting}
+                  className="btn btn-secondary btn-sm"
+                  title="Run test suite against visible test cases"
+                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                >
+                  {isSubmitting ? <RefreshCw size={12} className="spin" /> : <Play size={12} />}
+                  <span>Run Tests</span>
+                </button>
+                <button 
+                  onClick={handleSubmitCode}
+                  disabled={isSubmitting}
+                  className="btn btn-submit btn-sm"
+                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem', fontWeight: 700 }}
+                  title="Submit code for full evaluation & Bug Fingerprint recording"
+                >
+                  {isSubmitting ? <RefreshCw size={13} className="spin" /> : <CheckCircle2 size={13} />}
+                  <span>Submit Code</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Cognitive Gate: Explain Before You Fix */}
@@ -976,7 +1042,17 @@ export default function PracticePage({
                 ) : (
                   <div className="test-results-group">
                     {/* Status summary banner */}
-                    {testResults.status === 'passed' ? (
+                    {hasCompileError ? (
+                      <div className="practice-result-banner fail">
+                        <Terminal size={22} color="#ef4444" />
+                        <div>
+                          <strong style={{ fontSize: '0.86rem', color: '#ef4444' }}>Syntax / Compilation Error Detected</strong>
+                          <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                            {testResults.feedback?.summary || 'The program has syntax or compilation defects that prevented execution. Inspect the diagnostic log below.'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : testResults.status === 'passed' ? (
                       <div className="practice-result-banner pass">
                         <Award size={22} color="#10b981" />
                         <div>
@@ -990,7 +1066,11 @@ export default function PracticePage({
                       <div className="practice-result-banner fail">
                         <AlertCircle size={22} color="#ef4444" />
                         <div>
-                          <strong style={{ fontSize: '0.86rem', color: '#ef4444' }}>Execution Failure Detected</strong>
+                          <strong style={{ fontSize: '0.86rem', color: '#ef4444' }}>
+                            {testResults.results?.some(t => t.status === 'runtime_error')
+                              ? 'Runtime Error Encountered'
+                              : (testResults.results?.some(t => t.status === 'timeout') ? 'Execution Timed Out' : 'Execution Failure Detected')}
+                          </strong>
                           <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                             {testResults.feedback?.summary || 'Review your boundary conditions or consult the progressive hint ladder.'}
                           </p>
@@ -1032,6 +1112,15 @@ export default function PracticePage({
                             {t.expected !== undefined && <div><strong>Expected:</strong> <span style={{ color: '#a7f3d0' }}>{t.expected}</span></div>}
                             {t.actual !== undefined && <div><strong>Actual:</strong> <span style={{ color: t.status === 'passed' ? '#a7f3d0' : '#fca5a5' }}>{t.actual || '(no stdout)'}</span></div>}
                           </div>
+                          {t.stderr && (
+                            <div className="practice-terminal-error-box">
+                              <div className="terminal-error-title">
+                                <Terminal size={12} color="#ef4444" />
+                                <span>{t.status === 'compile_error' ? 'Compiler & Syntax Diagnostic Log' : 'Runtime Trace'}</span>
+                              </div>
+                              <pre className="terminal-error-text">{t.stderr}</pre>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1146,17 +1235,21 @@ export default function PracticePage({
                   <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 700 }}>
                     Current Diagnostic Classification
                   </span>
-                  <h4 style={{ fontSize: '1rem', marginTop: '0.35rem', color: 'var(--cyan-accent)' }}>
-                    {testResults?.fingerprint?.category 
-                      ? testResults.fingerprint.category.replace(/_/g, ' ').toUpperCase()
-                      : currentChallenge?.concept?.replace(/_/g, ' ').toUpperCase() || 'INDEX BOUNDARY ANALYSIS'}
+                  <h4 style={{ fontSize: '1rem', marginTop: '0.35rem', color: hasCompileError ? '#f87171' : 'var(--cyan-accent)' }}>
+                    {hasCompileError
+                      ? 'SYNTAX / COMPILATION ERROR'
+                      : (testResults?.fingerprint?.category 
+                          ? testResults.fingerprint.category.replace(/_/g, ' ').toUpperCase()
+                          : (testResults?.summary?.passed ? 'ALL VERIFICATIONS PASSED' : 'DEFECT ISOLATION IN PROGRESS'))}
                   </h4>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.4rem', lineHeight: 1.45 }}>
-                    {testResults?.feedback?.suggestion || 'CodeDNA identifies recurring structural patterns in failure traces to optimize deliberate practice.'}
+                    {hasCompileError
+                      ? 'The compiler encountered invalid syntax or unexpected tokens before execution. Fix the syntax defect below before analyzing algorithmic boundaries.'
+                      : (testResults?.feedback?.suggestion || 'CodeDNA identifies recurring structural patterns in failure traces to optimize deliberate practice.')}
                   </p>
-                  {testResults?.fingerprint?.evidence && (
-                    <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#94a3b8' }}>
-                      Evidence: {testResults.fingerprint.evidence}
+                  {(hasCompileError ? compileErrorText : testResults?.fingerprint?.evidence) && (
+                    <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: hasCompileError ? '#fca5a5' : '#94a3b8', whiteSpace: 'pre-wrap' }}>
+                      {hasCompileError ? `Compiler Diagnostic:\n${compileErrorText}` : `Evidence: ${testResults.fingerprint.evidence}`}
                     </div>
                   )}
                 </div>

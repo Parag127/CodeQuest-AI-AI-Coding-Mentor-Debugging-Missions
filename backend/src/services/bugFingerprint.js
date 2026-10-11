@@ -18,6 +18,7 @@ export const FINGERPRINT_CATEGORIES = {
   WRONG_CONDITION: 'wrong_condition',
   WRONG_INDEX: 'wrong_index',
   EMPTY_INPUT: 'empty_input',
+  SYNTAX_ERROR: 'syntax_error',
   UNKNOWN: 'unknown'
 };
 
@@ -30,8 +31,22 @@ export const BUG_PATTERNS = {
   EMPTY_INPUT: 'empty_input',
   EMPTY_INPUT_UNHANDLED: 'empty_input',
   NULL_DEREFERENCE: 'wrong_index',
+  SYNTAX_ERROR: 'syntax_error',
+  COMPILE_ERROR: 'syntax_error',
   UNKNOWN: 'unknown',
   GENERAL: 'unknown',
+
+  syntax_error: {
+    key: 'syntax_error',
+    label: 'Syntax / Compilation Error',
+    description: 'Code contains a syntax or compilation error that prevented the program from executing.'
+  },
+  compile_error: {
+    key: 'compile_error',
+    canonical: 'syntax_error',
+    label: 'Syntax / Compilation Error',
+    description: 'Code failed during compilation or syntax parsing.'
+  },
 
   loop_boundary: {
     key: 'loop_boundary',
@@ -279,6 +294,22 @@ function checkJavaScriptRules(code, failingTests) {
 function checkCommonRules(code, failingTests, language, concept = null) {
   const findings = [];
 
+  // Common rule 0: Compilation / Syntax error guard
+  const hasCompileError = failingTests.some(t => t.status === 'compile_error' || /syntax|compile/i.test(String(t.stderr || '')));
+  if (hasCompileError) {
+    const errTest = failingTests.find(t => t.status === 'compile_error' || /syntax|compile/i.test(String(t.stderr || '')));
+    const rawErr = String(errTest?.stderr || 'Compilation or syntax error reported in compiler output.').trim();
+    const cleanErr = rawErr.split('\n')[0];
+    findings.push({
+      category: FINGERPRINT_CATEGORIES.SYNTAX_ERROR,
+      reason: 'Code contains a syntax or compilation error that prevented the program from executing.',
+      evidence: cleanErr.length > 150 ? cleanErr.slice(0, 150) + '...' : cleanErr,
+      confidence: 'high',
+      isHeuristic: false
+    });
+    return findings;
+  }
+
   // Common rule 1: empty_input
   // Triggered when a failing test specifically tested an empty/zero input
   const emptyFailingTests = failingTests.filter(t => isEmptyInputPattern(t.stdin));
@@ -317,7 +348,7 @@ function checkCommonRules(code, failingTests, language, concept = null) {
       confidence: isHighConfidence ? 'high' : 'medium',
       isHeuristic: !isHighConfidence
     });
-  } else if (hasOffByOneOutput || (isLoopConcept && failingTests.length > 0)) {
+  } else if (!hasCompileError && (hasOffByOneOutput || (isLoopConcept && failingTests.length > 0))) {
     findings.push({
       category: FINGERPRINT_CATEGORIES.LOOP_BOUNDARY,
       reason: hasOffByOneOutput

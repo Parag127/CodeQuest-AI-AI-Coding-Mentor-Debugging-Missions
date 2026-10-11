@@ -209,7 +209,8 @@ router.post('/', async (req, res) => {
           visibility: 'visible',
           status: execResult.status,
           expected: tc.expected_output,
-          actual: execResult.stdout || ''
+          actual: execResult.stdout || '',
+          stderr: execResult.stderr || null
         });
       } else {
         // HIDDEN TEST: strictly omit stdin, expected, actual, stdout, stderr
