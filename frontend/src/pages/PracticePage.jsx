@@ -26,10 +26,20 @@ import {
   Shield,
   HelpCircle,
   Zap,
-  Check
+  Check,
+  Server,
+  Wifi,
+  WifiOff,
+  Activity,
+  X
 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
+import { 
+  getApiBase, 
+  setCustomApiBase, 
+  resetCustomApiBase, 
+  testApiConnection, 
+  safeApiFetch 
+} from '../config/api';
 
 // Fallback seed challenges in case the server is starting or offline
 const FALLBACK_CHALLENGES = [
@@ -256,6 +266,20 @@ export default function PracticePage({
   const [isChallengesDropdownOpen, setIsChallengesDropdownOpen] = useState(false);
   const [activeLeftTab, setActiveLeftTab] = useState('editor'); // 'editor' | 'description'
 
+  // Backend API Status & Custom Target Configuration State
+  const [activeApiBase, setActiveApiBase] = useState(() => getApiBase());
+  const [apiConnectionStatus, setApiConnectionStatus] = useState('checking'); // 'connected' | 'standby' | 'disconnected'
+  const [apiLatency, setApiLatency] = useState(null);
+  const [isApiModalOpen, setIsApiModalOpen] = useState(false);
+  const [customApiInput, setCustomApiInput] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('codedna_api_url') || '';
+    }
+    return '';
+  });
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
   const textareaRef = useRef(null);
 
   // Helper to extract starter code
@@ -274,15 +298,28 @@ export default function PracticePage({
     }));
   };
 
+  // Check Backend Connectivity
+  const checkBackendHealth = useCallback(async (targetUrl = null) => {
+    const res = await testApiConnection(targetUrl);
+    if (res.ok) {
+      setApiConnectionStatus('connected');
+      setApiLatency(res.latencyMs);
+    } else {
+      setApiConnectionStatus('disconnected');
+      setApiLatency(null);
+    }
+    return res;
+  }, []);
+
   // 1. Fetch Challenge Catalog
   const fetchChallengesCatalog = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/challenges`);
-      if (res.ok) {
-        const json = await res.json();
-        const catalogList = json.challenges || json.data || [];
+      const { ok, data } = await safeApiFetch('/api/challenges');
+      if (ok && data) {
+        const catalogList = data.challenges || data.data || [];
         if (Array.isArray(catalogList) && catalogList.length > 0) {
           setChallenges(catalogList);
+          setApiConnectionStatus('connected');
         }
       }
     } catch (err) {
@@ -296,10 +333,9 @@ export default function PracticePage({
     let detail = null;
 
     try {
-      const res = await fetch(`${API_BASE}/api/challenges/${challengeId}`);
-      if (res.ok) {
-        const json = await res.json();
-        detail = json.challenge || json.data;
+      const { ok, data } = await safeApiFetch(`/api/challenges/${challengeId}`);
+      if (ok && data) {
+        detail = data.challenge || data.data;
       }
     } catch (err) {
       console.warn(`[PracticePage] Detail fallback for ${challengeId}:`, err.message);
@@ -329,7 +365,7 @@ export default function PracticePage({
   // 3. Fetch EBYF Question for Current Challenge
   const fetchEbyfQuestion = useCallback(async (challengeId, subId = null) => {
     try {
-      const res = await fetch(`${API_BASE}/api/explain-before-fix/question`, {
+      const { ok, data } = await safeApiFetch('/api/explain-before-fix/question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -339,11 +375,8 @@ export default function PracticePage({
           submissionId: subId
         })
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setEbyfQuestion(json.data);
-        }
+      if (ok && data && data.success && data.data) {
+        setEbyfQuestion(data.data);
       }
     } catch (err) {
       setEbyfQuestion({
@@ -356,12 +389,9 @@ export default function PracticePage({
   // 4. Fetch Adaptive Recommendation
   const fetchRecommendation = useCallback(async (currentId) => {
     try {
-      const res = await fetch(`${API_BASE}/api/recommendations/${activeLearnerId}?currentChallengeId=${currentId || activeChallengeId}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setRecommendation(json.data);
-        }
+      const { ok, data } = await safeApiFetch(`/api/recommendations/${activeLearnerId}?currentChallengeId=${currentId || activeChallengeId}`);
+      if (ok && data && data.success && data.data) {
+        setRecommendation(data.data);
       }
     } catch (err) {
       console.warn('[PracticePage] Recommendation standby:', err.message);
@@ -371,26 +401,33 @@ export default function PracticePage({
   // 5. Fetch Learner Progress & Telemetry
   const fetchProgress = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/progress/${activeLearnerId}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setLearnerProgress(json.data);
-        }
+      const { ok, data } = await safeApiFetch(`/api/progress/${activeLearnerId}`);
+      if (ok && data && data.success && data.data) {
+        setLearnerProgress(data.data);
       }
     } catch (err) {
       console.warn('[PracticePage] Progress telemetry standby:', err.message);
     }
   }, [activeLearnerId]);
 
-  // Mount effect
+  // Mount effect & API change listener
   useEffect(() => {
+    checkBackendHealth();
     fetchChallengesCatalog();
     loadChallengeDetails(activeChallengeId, selectedLang);
     fetchEbyfQuestion(activeChallengeId);
     fetchRecommendation(activeChallengeId);
     fetchProgress();
-  }, [fetchChallengesCatalog]);
+
+    const handleApiChanged = () => {
+      setActiveApiBase(getApiBase());
+      checkBackendHealth();
+      fetchChallengesCatalog();
+    };
+
+    window.addEventListener('codedna_api_changed', handleApiChanged);
+    return () => window.removeEventListener('codedna_api_changed', handleApiChanged);
+  }, [checkBackendHealth, fetchChallengesCatalog, loadChallengeDetails, fetchEbyfQuestion, fetchRecommendation, fetchProgress, activeChallengeId, selectedLang]);
 
   // Switch challenge handler
   const handleSelectChallenge = async (challengeId) => {

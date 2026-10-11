@@ -37,6 +37,11 @@ try {
   }
 }
 
+// In Vercel or cloud environments, default to mock runner if no external runner API is provided
+if (process.env.VERCEL && !process.env.JUDGE0_API_URL && process.env.JUDGE0_MOCK_RUNNER === undefined) {
+  process.env.JUDGE0_MOCK_RUNNER = 'true';
+}
+
 // Allowed CORS origins
 const allowedOrigins = process.env.CLIENT_ORIGIN
   ? process.env.CLIENT_ORIGIN.split(',').map(o => o.trim())
@@ -46,10 +51,10 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests, allowed origins, wildcards, or Vercel preview/production domains
     if (
-      !origin || 
-      allowedOrigins.includes(origin) || 
+      !origin ||
+      allowedOrigins.includes(origin) ||
       allowedOrigins.includes('*') ||
-      origin.endsWith('.vercel.app') ||
+      origin.includes('vercel.app') ||
       process.env.NODE_ENV !== 'production'
     ) {
       callback(null, true);
@@ -198,7 +203,7 @@ app.delete('/api/items/:id', (req, res) => {
   res.json({ success: true, message: `Item ${itemId} deleted successfully` });
 });
 
-// CodeDNA Routes
+// CodeDNA Routes (Standard /api prefix)
 app.use('/api/challenges', challengesRouter);
 app.use('/api/submissions', submissionsRouter);
 app.use('/api/hints', hintsRouter);
@@ -206,6 +211,18 @@ app.use('/api/ai', aiRouter);
 app.use('/api/explain-before-fix', ebyfRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/recommendations', recommendationsRouter);
+
+// Fallback mounts without /api prefix (for proxies/serverless adapters that strip /api)
+app.use('/challenges', challengesRouter);
+app.use('/submissions', submissionsRouter);
+app.use('/hints', hintsRouter);
+app.use('/ai', aiRouter);
+app.use('/explain-before-fix', ebyfRouter);
+app.use('/progress', progressRouter);
+app.use('/recommendations', recommendationsRouter);
+app.use('/auth', authRouter);
+app.get('/health', (req, res) => res.redirect('/api/health'));
+app.get('/info', (req, res) => res.redirect('/api/info'));
 
 // Serve static client assets and SPA routing fallback in production/standalone deployments
 if (staticDistPath) {
@@ -227,11 +244,11 @@ app.use(errorHandler);
 // Detect if the file is being run directly (e.g. `node src/index.js`) versus imported by a test suite
 const currentFile = fileURLToPath(import.meta.url);
 const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : '';
-const isMainModule = invokedFile === currentFile || 
-                     (process.argv[1] && (process.argv[1].endsWith('src/index.js') || process.argv[1].endsWith('src\\index.js')));
+const isMainModule = invokedFile === currentFile ||
+  (process.argv[1] && (process.argv[1].endsWith('src/index.js') || process.argv[1].endsWith('src\\index.js')));
 const isTestEnv = process.env.NODE_ENV === 'test' ||
-                  process.execArgv.includes('--test') ||
-                  process.argv.some(arg => typeof arg === 'string' && arg.includes('--test'));
+  process.execArgv.includes('--test') ||
+  process.argv.some(arg => typeof arg === 'string' && arg.includes('--test'));
 
 let server;
 if (isMainModule && !isTestEnv) {

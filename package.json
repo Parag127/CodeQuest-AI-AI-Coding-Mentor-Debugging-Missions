@@ -27,9 +27,14 @@
     "fullstack"
   ],
   "author": "",
-  "license": "MIT",
+  "type": "module",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "vite": "^5.4.11"
   },
   "devDependencies": {

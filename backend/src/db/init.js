@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db, { dbPath } from './index.js';
+import { SCHEMA_SQL, SEED_SQL } from './sqlDefaults.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,13 +11,16 @@ export function initDb() {
   const schemaPath = path.resolve(__dirname, 'schema.sql');
   const seedPath = path.resolve(__dirname, 'seed.sql');
 
-  if (!fs.existsSync(schemaPath)) {
-    throw new Error(`Schema file not found at ${schemaPath}`);
-  }
+  // Load schema from file or fallback to embedded SQL
+  const schemaSql = fs.existsSync(schemaPath)
+    ? fs.readFileSync(schemaPath, 'utf-8')
+    : SCHEMA_SQL;
 
-  // Run schema creation
-  const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-  db.exec(schemaSql);
+  try {
+    db.exec(schemaSql);
+  } catch (err) {
+    console.warn('[DB] Schema execution warning:', err.message);
+  }
 
   // Column migration checks for existing SQLite files
   try {
@@ -118,15 +122,29 @@ export function initDb() {
   }
 
   // Run seed data
-  if (fs.existsSync(seedPath)) {
-    const seedSql = fs.readFileSync(seedPath, 'utf-8');
+  const seedSql = fs.existsSync(seedPath)
+    ? fs.readFileSync(seedPath, 'utf-8')
+    : SEED_SQL;
+
+  try {
     db.exec(seedSql);
+  } catch (err) {
+    console.warn('[DB] Seed data execution warning:', err.message);
   }
 
-  const challengeCount = db.prepare('SELECT COUNT(*) AS count FROM challenges').get().count;
-  const testCaseCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases').get().count;
-  const publicTestCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases WHERE is_public = 1').get().count;
-  const hiddenTestCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases WHERE is_public = 0').get().count;
+  let challengeCount = 0;
+  let testCaseCount = 0;
+  let publicTestCount = 0;
+  let hiddenTestCount = 0;
+
+  try {
+    challengeCount = db.prepare('SELECT COUNT(*) AS count FROM challenges').get()?.count || 0;
+    testCaseCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases').get()?.count || 0;
+    publicTestCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases WHERE is_public = 1').get()?.count || 0;
+    hiddenTestCount = db.prepare('SELECT COUNT(*) AS count FROM test_cases WHERE is_public = 0').get()?.count || 0;
+  } catch (err) {
+    console.warn('[DB] Count query check skipped:', err.message);
+  }
 
   console.log(`[DB] Database initialized at: ${dbPath}`);
   console.log(`[DB] Challenges: ${challengeCount}`);
