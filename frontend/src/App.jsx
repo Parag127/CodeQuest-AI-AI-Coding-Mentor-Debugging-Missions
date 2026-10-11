@@ -14,7 +14,7 @@ import AuthModal from './components/AuthModal';
 import LoginPage from './pages/LoginPage';
 import PracticePage from './pages/PracticePage';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:5000');
 
 export default function App() {
   const [theme, setTheme] = useState(() => {

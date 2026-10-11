@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: codedna-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --prefix backend
+    startCommand: npm run start --prefix backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JUDGE0_MOCK_RUNNER
+        value: "true"
+      - key: CLIENT_ORIGIN
+        value: "*"
