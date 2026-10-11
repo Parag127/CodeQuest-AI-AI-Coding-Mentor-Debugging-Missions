@@ -1,0 +1,26 @@
+{
+  "name": "dy-patil-hackathon-docker-starter",
+  "version": "1.0.0",
+  "description": "Full-Stack Dockerized Application (Express API + Vite React + Docker Compose)",
+  "private": true,
+  "scripts": {
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": [
+    "docker",
+    "docker-compose",
+    "express",
+    "react",
+    "vite",
+    "fullstack"
+  ],
+  "author": "",
+  "license": "MIT"
+}
