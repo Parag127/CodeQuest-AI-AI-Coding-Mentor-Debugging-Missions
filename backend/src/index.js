@@ -2,10 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import os from 'os';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initDb } from './db/init.js';
 import challengesRouter from './routes/challenges.js';
 import submissionsRouter from './routes/submissions.js';
 import hintsRouter from './routes/hints.js';
+import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -238,18 +241,22 @@ app.use('/api/submissions', submissionsRouter);
 app.use('/api/hints', hintsRouter);
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl });
-});
+app.use(notFoundHandler);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal Server Error', message: err.message });
-});
+// Centralized error handling middleware (handles JSON parse errors, payload limits, CORS, etc.)
+app.use(errorHandler);
+
+// Detect if the file is being run directly (e.g. `node src/index.js`) versus imported by a test suite
+const currentFile = fileURLToPath(import.meta.url);
+const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : '';
+const isMainModule = invokedFile === currentFile || 
+                     (process.argv[1] && (process.argv[1].endsWith('src/index.js') || process.argv[1].endsWith('src\\index.js')));
+const isTestEnv = process.env.NODE_ENV === 'test' ||
+                  process.execArgv.includes('--test') ||
+                  process.argv.some(arg => typeof arg === 'string' && arg.includes('--test'));
 
 let server;
-if (process.env.NODE_ENV !== 'test') {
+if (isMainModule && !isTestEnv) {
   server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 CodeDNA Backend API running on port ${PORT}`);
     console.log(`🌐 Health check available at http://localhost:${PORT}/api/health`);

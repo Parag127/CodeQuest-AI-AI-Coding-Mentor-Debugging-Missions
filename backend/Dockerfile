@@ -21,6 +21,9 @@ RUN npm install --omit=dev && npm cache clean --force
 # Copy application source code
 COPY src/ ./src/
 
+# Ensure SQLite data directory exists and assign ownership to unprivileged node user
+RUN mkdir -p /app/data && chown -R node:node /app
+
 # Use unprivileged user for enhanced security
 USER node
 

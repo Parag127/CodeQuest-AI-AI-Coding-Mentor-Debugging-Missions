@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import db from '../db/index.js';
 import { executeSubmission, isRunnerConfigured, STATUS } from '../services/judgeService.js';
 import { classifyBugFingerprint } from '../services/bugFingerprintService.js';
+import { parseLanguages } from '../models/challengeModel.js';
 
 const router = express.Router();
 
@@ -15,7 +16,17 @@ const MAX_CODE_SIZE = 65536; // 64 KB
  */
 router.post('/', async (req, res) => {
   try {
-    const { challengeId, language, code, prediction, explanation, learnerId: bodyLearnerId } = req.body || {};
+    // 0. Validate Request Body Structure (Guard against malformed/non-object payloads)
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Request body must be a valid JSON object'
+        }
+      });
+    }
+
+    const { challengeId, language, code, prediction, explanation, learnerId: bodyLearnerId } = req.body;
 
     // 1. Validate Challenge ID
     if (!challengeId || typeof challengeId !== 'string') {
@@ -27,7 +38,8 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const challenge = db.prepare('SELECT * FROM challenges WHERE id = ?').get(challengeId);
+    const trimmedChallengeId = challengeId.trim();
+    const challenge = db.prepare('SELECT * FROM challenges WHERE id = ?').get(trimmedChallengeId);
     if (!challenge) {
       return res.status(404).json({
         error: {
@@ -37,8 +49,8 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 2. Validate Language
-    if (!language || !['javascript', 'java'].includes(language)) {
+    // 2. Validate Platform Supported Languages
+    if (!language || typeof language !== 'string' || !['javascript', 'java'].includes(language)) {
       return res.status(400).json({
         error: {
           code: 'INVALID_LANGUAGE',
@@ -47,8 +59,28 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 3. Validate Code
-    if (!code || typeof code !== 'string' || code.trim().length === 0) {
+    // 3. Validate Requested Language against Challenge Supported Languages
+    const supportedLanguages = parseLanguages(challenge.languages);
+    if (!supportedLanguages.includes(language)) {
+      return res.status(400).json({
+        error: {
+          code: 'UNSUPPORTED_LANGUAGE',
+          message: `Language '${language}' is not supported for challenge '${challengeId}'. Supported: ${supportedLanguages.join(', ')}`
+        }
+      });
+    }
+
+    // 4. Validate Code
+    if (code === undefined || code === null || typeof code !== 'string') {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_CODE',
+          message: 'Code is required and must be a string'
+        }
+      });
+    }
+
+    if (code.trim().length === 0) {
       return res.status(400).json({
         error: {
           code: 'INVALID_CODE',
@@ -66,7 +98,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 4. Verify Safe Runner Availability
+    // 5. Verify Safe Runner Availability
     if (!isRunnerConfigured()) {
       return res.status(503).json({
         error: {
@@ -76,13 +108,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 5. Load Test Cases
+    // 6. Load Test Cases
     const testCases = db.prepare(`
       SELECT id, is_public, stdin, expected_output, ordinal
       FROM test_cases
       WHERE challenge_id = ?
       ORDER BY ordinal ASC
-    `).all(challengeId);
+    `).all(trimmedChallengeId);
 
     if (!testCases || testCases.length === 0) {
       return res.status(500).json({
@@ -93,11 +125,11 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 6. Generate Submission Identity
+    // 7. Generate Submission Identity
     const submissionId = crypto.randomUUID();
     const learnerId = bodyLearnerId || req.headers['x-learner-id'] || 'anonymous-learner';
 
-    // 7. Execute Test Cases
+    // 8. Execute Test Cases
     const results = [];
     const internalResults = [];
     let passCount = 0;
@@ -129,21 +161,23 @@ router.post('/', async (req, res) => {
             hasCompileError = true;
           }
         } catch (runnerErr) {
-          if (runnerErr.code === 'RUNNER_NOT_CONFIGURED' || runnerErr.statusCode === 503) {
-            return res.status(503).json({
+          // Handle rate limits from provider
+          if (runnerErr.code === 'RUNNER_RATE_LIMITED' || runnerErr.statusCode === 429) {
+            return res.status(429).json({
               error: {
-                code: runnerErr.code || 'RUNNER_UNAVAILABLE',
-                message: runnerErr.message
+                code: 'RUNNER_RATE_LIMITED',
+                message: runnerErr.message || 'Execution provider rate limit exceeded'
               }
             });
           }
-          execResult = {
-            status: STATUS.INTERNAL_ERROR,
-            stdout: null,
-            stderr: runnerErr.message,
-            timeMs: null,
-            memoryKb: null
-          };
+
+          // Handle execution service provider failures without crashing
+          return res.status(503).json({
+            error: {
+              code: runnerErr.code || 'RUNNER_UNAVAILABLE',
+              message: runnerErr.message || 'Execution service failure'
+            }
+          });
         }
       }
 

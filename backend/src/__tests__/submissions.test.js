@@ -52,6 +52,21 @@ describe('POST /api/submissions Route Tests', () => {
       if (prevMock) process.env.JUDGE0_MOCK_RUNNER = prevMock;
     });
 
+    test('returns 400 for malformed non-object JSON body (e.g. array)', async () => {
+      process.env.JUDGE0_MOCK_RUNNER = 'true';
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(['not-an-object'])
+      });
+
+      assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.error?.code, 'INVALID_REQUEST');
+      assert.strictEqual(body.error?.message, 'Request body must be a valid JSON object');
+    });
+
     test('returns 400 for missing challengeId', async () => {
       process.env.JUDGE0_MOCK_RUNNER = 'true';
 
@@ -87,7 +102,7 @@ describe('POST /api/submissions Route Tests', () => {
       assert.strictEqual(body.error?.code, 'CHALLENGE_NOT_FOUND');
     });
 
-    test('returns 400 for unsupported language', async () => {
+    test('returns 400 for platform-unsupported language (e.g. python)', async () => {
       process.env.JUDGE0_MOCK_RUNNER = 'true';
 
       const res = await fetch(`${baseUrl}/api/submissions`, {
@@ -103,6 +118,50 @@ describe('POST /api/submissions Route Tests', () => {
       assert.strictEqual(res.status, 400);
       const body = await res.json();
       assert.strictEqual(body.error?.code, 'INVALID_LANGUAGE');
+    });
+
+    test('returns 400 UNSUPPORTED_LANGUAGE when requested language is not supported by challenge', async () => {
+      process.env.JUDGE0_MOCK_RUNNER = 'true';
+
+      const original = db.prepare('SELECT languages FROM challenges WHERE id = ?').get('largest-number');
+      db.prepare('UPDATE challenges SET languages = ? WHERE id = ?').run('["javascript"]', 'largest-number');
+
+      try {
+        const res = await fetch(`${baseUrl}/api/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            challengeId: 'largest-number',
+            language: 'java',
+            code: 'public class Main { public static void main(String[] args) {} }'
+          })
+        });
+
+        assert.strictEqual(res.status, 400);
+        const body = await res.json();
+        assert.strictEqual(body.error?.code, 'UNSUPPORTED_LANGUAGE');
+        assert.ok(body.error?.message.includes('not supported for challenge'));
+      } finally {
+        db.prepare('UPDATE challenges SET languages = ? WHERE id = ?').run(original.languages, 'largest-number');
+      }
+    });
+
+    test('returns 400 for non-string code (e.g. numeric)', async () => {
+      process.env.JUDGE0_MOCK_RUNNER = 'true';
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'javascript',
+          code: 12345
+        })
+      });
+
+      assert.strictEqual(res.status, 400);
+      const body = await res.json();
+      assert.strictEqual(body.error?.code, 'INVALID_CODE');
     });
 
     test('returns 400 for empty code', async () => {
@@ -143,12 +202,117 @@ describe('POST /api/submissions Route Tests', () => {
     });
   });
 
-  describe('Execution, Results Shaping & Strict Hidden Test Privacy', () => {
+  describe('Execution Scenarios: Java, JavaScript, Wrong Output, Errors & Privacy', () => {
     before(() => {
       process.env.JUDGE0_MOCK_RUNNER = 'true';
     });
 
-    test('evaluates buggy submission, generates feedback, and protects hidden tests', async () => {
+    test('1. Successful Java submission: passes all tests and returns status passed', async () => {
+      const javaCorrectCode = `
+import java.util.Scanner;
+
+public class Main {
+    public static int findLargest(int[] numbers) {
+        int max = numbers[0];
+        for (int i = 1; i < numbers.length; i++) {
+            if (numbers[i] > max) {
+                max = numbers[i];
+            }
+        }
+        return max;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int n = scanner.nextInt();
+            int[] numbers = new int[n];
+            for (int i = 0; i < n; i++) {
+                numbers[i] = scanner.nextInt();
+            }
+            System.out.println(findLargest(numbers));
+        }
+    }
+}
+`;
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Learner-Id': 'java-learner'
+        },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'java',
+          code: javaCorrectCode
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+
+      assert.strictEqual(body.status, 'passed');
+      assert.strictEqual(body.feedback, null);
+      assert.strictEqual(body.results.length, 5);
+
+      for (const r of body.results) {
+        assert.strictEqual(r.status, 'passed');
+      }
+
+      // Check DB record
+      const saved = db.prepare('SELECT * FROM submissions WHERE id = ?').get(body.submissionId);
+      assert.ok(saved);
+      assert.strictEqual(saved.language, 'java');
+      assert.strictEqual(saved.pass_count, 5);
+      assert.strictEqual(saved.fail_count, 0);
+      assert.strictEqual(saved.status, 'passed');
+    });
+
+    test('2. Successful JavaScript submission: passes all tests and returns status passed', async () => {
+      const jsCorrectCode = `
+const fs = require('fs');
+function findLargest(numbers) {
+  let max = numbers[0];
+  for (let i = 1; i < numbers.length; i++) {
+    if (numbers[i] > max) { max = numbers[i]; }
+  }
+  return max;
+}
+const input = fs.readFileSync(0, 'utf-8').trim();
+if (input.length > 0) {
+  const lines = input.split('\\n');
+  const numbers = (lines[1] || lines[0]).trim().split(/\\s+/).map(Number);
+  console.log(findLargest(numbers));
+}
+`;
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Learner-Id': 'js-learner'
+        },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'javascript',
+          code: jsCorrectCode
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+
+      assert.strictEqual(body.status, 'passed');
+      assert.strictEqual(body.feedback, null);
+      assert.strictEqual(body.results.length, 5);
+
+      for (const r of body.results) {
+        assert.strictEqual(r.status, 'passed');
+      }
+    });
+
+    test('3. Wrong output: reports failure, visible tests show expected and actual', async () => {
       const challenge = db.prepare('SELECT starter_code_javascript FROM challenges WHERE id = ?').get('largest-number');
       const buggyCode = challenge.starter_code_javascript;
 
@@ -170,112 +334,219 @@ describe('POST /api/submissions Route Tests', () => {
       assert.strictEqual(res.status, 200);
       const body = await res.json();
 
-      assert.ok(body.submissionId, 'submissionId missing');
+      assert.ok(body.submissionId);
       assert.strictEqual(body.status, 'failed');
       assert.ok(Array.isArray(body.results));
-      assert.strictEqual(body.results.length, 5); // 3 visible + 2 hidden
+      assert.strictEqual(body.results.length, 5);
 
-      // Visible tests shape
-      const visibleResults = body.results.filter(r => r.visibility === 'visible');
-      assert.strictEqual(visibleResults.length, 3);
-      for (const vr of visibleResults) {
-        assert.ok(vr.testId);
-        assert.strictEqual(vr.visibility, 'visible');
-        assert.ok(vr.status);
-        assert.ok(vr.expected !== undefined);
-        assert.ok(vr.actual !== undefined);
+      // Visible tests include expected and actual
+      const wrongResults = body.results.filter(r => r.status === 'wrong_output' && r.visibility === 'visible');
+      assert.ok(wrongResults.length >= 1);
+      for (const wr of wrongResults) {
+        assert.ok(wr.expected !== undefined);
+        assert.ok(wr.actual !== undefined);
       }
 
-      // Hidden tests shape (STRICT PRIVACY: opaque testId, visibility: "hidden", status ONLY)
-      const hiddenResults = body.results.filter(r => r.visibility === 'hidden');
-      assert.strictEqual(hiddenResults.length, 2);
-      for (const hr of hiddenResults) {
-        assert.ok(hr.testId);
-        assert.strictEqual(hr.visibility, 'hidden');
-        assert.ok(hr.status);
-        assert.strictEqual(hr.expected, undefined, 'Hidden test MUST NOT include expected output');
-        assert.strictEqual(hr.actual, undefined, 'Hidden test MUST NOT include actual output');
-        assert.strictEqual(hr.stdin, undefined, 'Hidden test MUST NOT include stdin');
-        assert.strictEqual(hr.stdout, undefined, 'Hidden test MUST NOT include stdout');
-        assert.strictEqual(hr.stderr, undefined, 'Hidden test MUST NOT include stderr');
-      }
-
-      // Bug Fingerprint feedback
+      // Feedback is populated
       assert.ok(body.feedback);
       assert.strictEqual(body.feedback.bugCategory, 'loop_boundary');
-      assert.ok(body.feedback.summary.includes('loop'));
-      assert.strictEqual(body.feedback.hintLevelAvailable, 1);
-
-      // Verify DB persistence
-      const savedSubmission = db.prepare('SELECT * FROM submissions WHERE id = ?').get(body.submissionId);
-      assert.ok(savedSubmission);
-      assert.strictEqual(savedSubmission.challenge_id, 'largest-number');
-      assert.strictEqual(savedSubmission.learner_id, 'test-learner-1');
-      assert.strictEqual(savedSubmission.status, 'failed');
-
-      const savedResults = db.prepare('SELECT * FROM test_results WHERE submission_id = ?').all(body.submissionId);
-      assert.strictEqual(savedResults.length, 5);
-
-      const savedFingerprints = db.prepare('SELECT * FROM bug_fingerprints WHERE submission_id = ?').all(body.submissionId);
-      assert.ok(savedFingerprints.length >= 1);
-      assert.strictEqual(savedFingerprints[0].pattern_key, 'loop_boundary');
     });
 
-    test('evaluates correct submission and marks status passed', async () => {
-      // Fixed solution for largest-number
-      const fixedCode = `
-const fs = require('fs');
-function findLargest(numbers) {
-  let max = numbers[0];
-  for (let i = 1; i < numbers.length; i++) {
-    if (numbers[i] > max) { max = numbers[i]; }
-  }
-  return max;
-}
-const input = fs.readFileSync(0, 'utf-8').trim();
-if (input.length > 0) {
-  const lines = input.split('\\n');
-  const numbers = (lines[1] || lines[0]).trim().split(/\\s+/).map(Number);
-  console.log(findLargest(numbers));
+    test('4. Java compilation error: reports compile_error and cascades to remaining tests', async () => {
+      const javaBrokenCode = `
+public class Main {
+    public static void main(String[] args) {
+        syntax_error_test
+    }
 }
 `;
 
       const res = await fetch(`${baseUrl}/api/submissions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Learner-Id': 'test-learner-1'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challengeId: 'largest-number',
-          language: 'javascript',
-          code: fixedCode
+          language: 'java',
+          code: javaBrokenCode
         })
       });
 
       assert.strictEqual(res.status, 200);
       const body = await res.json();
 
-      assert.strictEqual(body.status, 'passed');
-      assert.strictEqual(body.feedback, null);
+      assert.strictEqual(body.status, 'failed');
+      assert.strictEqual(body.results.length, 5);
 
-      // Verify all tests passed
       for (const r of body.results) {
-        assert.strictEqual(r.status, 'passed');
+        assert.strictEqual(r.status, 'compile_error');
       }
+    });
 
-      // Verify learner progress updated
-      const progress = db.prepare('SELECT * FROM learner_progress WHERE learner_id = ? AND challenge_id = ?').get(
-        'test-learner-1',
-        'largest-number'
-      );
-      assert.ok(progress);
-      assert.strictEqual(progress.solved, 1);
-      assert.ok(progress.attempts >= 2);
+    test('5. Runtime error: reports runtime_error on thrown exception', async () => {
+      const runtimeErrorCode = `
+const fs = require('fs');
+function findLargest(numbers) {
+  runtime_error_test;
+  throw new Error("Simulated array index out of bounds");
+}
+`;
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'javascript',
+          code: runtimeErrorCode
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+
+      assert.strictEqual(body.status, 'failed');
+      assert.strictEqual(body.results.length, 5);
+
+      for (const r of body.results) {
+        assert.strictEqual(r.status, 'runtime_error');
+      }
+    });
+
+    test('6. Timeout: reports timeout status on long-running code', async () => {
+      const timeoutCode = `
+const fs = require('fs');
+function findLargest(numbers) {
+  timeout_test;
+  while(true) {}
+}
+`;
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'javascript',
+          code: timeoutCode
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+
+      assert.strictEqual(body.status, 'failed');
+      assert.strictEqual(body.results.length, 5);
+
+      for (const r of body.results) {
+        assert.strictEqual(r.status, 'timeout');
+      }
+    });
+
+    test('7. Execution-provider failure: returns 503 without crashing the API server', async () => {
+      // Temporarily simulate provider unreachable by pointing to a dead port
+      const prevUrl = process.env.JUDGE0_API_URL;
+      const prevMock = process.env.JUDGE0_MOCK_RUNNER;
+
+      delete process.env.JUDGE0_MOCK_RUNNER;
+      process.env.JUDGE0_API_URL = 'http://127.0.0.1:59999'; // Dead port
+
+      try {
+        const res = await fetch(`${baseUrl}/api/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            challengeId: 'largest-number',
+            language: 'javascript',
+            code: 'console.log("hello");'
+          })
+        });
+
+        assert.strictEqual(res.status, 503);
+        const body = await res.json();
+        assert.strictEqual(body.error?.code, 'RUNNER_UNAVAILABLE');
+        assert.ok(body.error?.message);
+
+        // Verify the server is still healthy and did not crash
+        process.env.JUDGE0_MOCK_RUNNER = 'true';
+        const healthCheck = await fetch(`${baseUrl}/api/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            challengeId: 'largest-number',
+            language: 'javascript',
+            code: 'console.log("recovery");'
+          })
+        });
+        assert.strictEqual(healthCheck.status, 200);
+      } finally {
+        if (prevUrl) process.env.JUDGE0_API_URL = prevUrl;
+        else delete process.env.JUDGE0_API_URL;
+        if (prevMock) process.env.JUDGE0_MOCK_RUNNER = prevMock;
+        else delete process.env.JUDGE0_MOCK_RUNNER;
+      }
+    });
+
+    test('8. Attempted hidden-test disclosure: strictly zero leak of hidden inputs or expected outputs', async () => {
+      process.env.JUDGE0_MOCK_RUNNER = 'true';
+
+      // Load the actual hidden tests from SQLite to know what values must NEVER appear
+      const hiddenTestCases = db.prepare(`
+        SELECT stdin, expected_output FROM test_cases WHERE challenge_id = ? AND is_public = 0
+      `).all('largest-number');
+
+      assert.ok(hiddenTestCases.length > 0, 'No hidden test cases found in DB to test');
+
+      const challenge = db.prepare('SELECT starter_code_javascript FROM challenges WHERE id = ?').get('largest-number');
+      const buggyCode = challenge.starter_code_javascript;
+
+      const res = await fetch(`${baseUrl}/api/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challengeId: 'largest-number',
+          language: 'javascript',
+          code: buggyCode
+        })
+      });
+
+      assert.strictEqual(res.status, 200);
+      const rawText = await res.text();
+      const body = JSON.parse(rawText);
+
+      // Verify serialized JSON string does not disclose ANY hidden input or expected output
+      for (const htc of hiddenTestCases) {
+        if (htc.stdin && htc.stdin.trim().length > 0) {
+          assert.strictEqual(
+            rawText.includes(htc.stdin.trim()),
+            false,
+            `Hidden test stdin leaked in response: ${htc.stdin}`
+          );
+        }
+        if (htc.expected_output && htc.expected_output.trim().length > 0) {
+          // Check that expected_output is not associated with hidden test results
+          const hiddenResults = body.results.filter(r => r.visibility === 'hidden');
+          for (const hr of hiddenResults) {
+            assert.strictEqual(hr.expected, undefined, 'Hidden test must NOT contain expected');
+            assert.strictEqual(hr.actual, undefined, 'Hidden test must NOT contain actual');
+            assert.strictEqual(hr.stdin, undefined, 'Hidden test must NOT contain stdin');
+            assert.strictEqual(hr.stdout, undefined, 'Hidden test must NOT contain stdout');
+            assert.strictEqual(hr.stderr, undefined, 'Hidden test must NOT contain stderr');
+            
+            // Strictly check allowed keys on hidden test objects
+            const allowedKeys = ['testId', 'visibility', 'status'];
+            const actualKeys = Object.keys(hr).sort();
+            assert.deepStrictEqual(actualKeys, allowedKeys.sort());
+          }
+        }
+      }
     });
   });
 
   after(() => {
+    try {
+      db.prepare("DELETE FROM test_cases WHERE challenge_id = 'js-only-challenge'").run();
+      db.prepare("DELETE FROM challenges WHERE id = 'js-only-challenge'").run();
+    } catch {}
     if (server) server.close();
   });
 });

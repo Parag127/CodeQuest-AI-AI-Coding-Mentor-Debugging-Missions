@@ -139,3 +139,91 @@ VALUES
   ('tc-rev-3', 'reverse-string', 1, 'CodeDNA\n', 'ANDedoC\n', 3),
   ('tc-rev-4-h', 'reverse-string', 0, 'racecar\n', 'racecar\n', 4),
   ('tc-rev-5-h', 'reverse-string', 0, '1234567890\n', '0987654321\n', 5);
+
+-- Challenge 3: Sum Positive Numbers (Array conditions & empty input handling)
+INSERT OR IGNORE INTO challenges (
+  id,
+  title,
+  description,
+  difficulty,
+  concept,
+  languages,
+  starter_code_javascript,
+  starter_code_java,
+  hint_level_1,
+  hint_level_2,
+  hint_level_3
+) VALUES (
+  'sum-positive',
+  'Sum Positive Numbers',
+  'Debug the program so it sums only the positive integers (greater than 0) in the input array. If the array is empty or contains no positive numbers, it must print 0.',
+  'easy',
+  'array_conditions',
+  '["javascript", "java"]',
+  'const fs = require(''fs'');
+
+function sumPositive(numbers) {
+  // Buggy implementation: crashes on empty array and adds all numbers instead of only positive ones
+  let total = 0;
+  for (let i = 0; i < numbers.length; i++) {
+    total += numbers[i];
+  }
+  return total;
+}
+
+const input = fs.readFileSync(0, ''utf-8'').trim();
+if (!input) {
+  console.log(0);
+} else {
+  const lines = input.split(''\n'');
+  const count = parseInt(lines[0], 10);
+  if (count === 0 || !lines[1]) {
+    console.log(0);
+  } else {
+    const numbers = lines[1].trim().split(/\s+/).map(Number);
+    console.log(sumPositive(numbers));
+  }
+}',
+  'import java.util.Scanner;
+
+public class Main {
+    public static int sumPositive(int[] numbers) {
+        // Buggy implementation: adds all numbers instead of only positive ones (> 0)
+        int total = 0;
+        for (int i = 0; i < numbers.length; i++) {
+            total += numbers[i];
+        }
+        return total;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int n = scanner.nextInt();
+            if (n <= 0) {
+                System.out.println(0);
+                return;
+            }
+            int[] numbers = new int[n];
+            for (int i = 0; i < n; i++) {
+                numbers[i] = scanner.nextInt();
+            }
+            System.out.println(sumPositive(numbers));
+        } else {
+            System.out.println(0);
+        }
+    }
+}',
+  'Check the condition inside your loop. Are you adding every number, or only numbers greater than zero?',
+  'Add an `if (numbers[i] > 0)` check inside the loop so negative numbers are skipped and not added to the total.',
+  'Change `total += numbers[i];` to `if (numbers[i] > 0) { total += numbers[i]; }`. Make sure the default return value is 0 for empty arrays.'
+);
+
+-- Test cases for Sum Positive Numbers
+INSERT OR IGNORE INTO test_cases (id, challenge_id, is_public, stdin, expected_output, ordinal)
+VALUES
+  ('sum-pos-1', 'sum-positive', 1, '4\n1 2 3 4\n', '10\n', 1),
+  ('sum-pos-2', 'sum-positive', 1, '5\n-1 2 -3 4 -5\n', '6\n', 2),
+  ('sum-pos-3', 'sum-positive', 1, '0\n', '0\n', 3),
+  ('sum-pos-4-h', 'sum-positive', 0, '3\n-10 -20 -30\n', '0\n', 4),
+  ('sum-pos-5-h', 'sum-positive', 0, '4\n0 5 0 15\n', '20\n', 5);
