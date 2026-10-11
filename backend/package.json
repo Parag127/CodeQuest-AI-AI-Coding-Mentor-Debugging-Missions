@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "node --test",
+    "test:e2e": "node --test test/api.test.js",
     "verify": "node src/__tests__/smokeVerification.js",
     "db:init": "node src/db/init.js"
   },
@@ -19,6 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

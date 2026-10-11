@@ -8,6 +8,10 @@ import { initDb } from './db/init.js';
 import challengesRouter from './routes/challenges.js';
 import submissionsRouter from './routes/submissions.js';
 import hintsRouter from './routes/hints.js';
+import aiRouter from './routes/ai.js';
+import ebyfRouter from './routes/explainBeforeFix.js';
+import progressRouter from './routes/progress.js';
+import recommendationsRouter from './routes/recommendations.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -41,7 +45,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Learner-Id']
 }));
 
-// Body parser with 100kb limit as required by API contract
+// Body parser with 100kb limit as required by API contract and security rules
 app.use(express.json({ limit: '100kb' }));
 
 // In-memory demo users store for authentication
@@ -92,7 +96,13 @@ app.get('/', (req, res) => {
       { path: '/api/items', method: 'POST', description: 'Create sprint item' },
       { path: '/api/items/:id', method: 'DELETE', description: 'Delete sprint item' },
       { path: '/api/auth/login', method: 'POST', description: 'Authenticate user session' },
-      { path: '/api/auth/register', method: 'POST', description: 'Register new user account' }
+      { path: '/api/auth/register', method: 'POST', description: 'Register new user account' },
+      { path: '/api/ai/health', method: 'GET', description: 'Gemini AI service health check' },
+      { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
+      { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
+      { path: '/api/explain-before-fix', method: 'POST', description: 'Learner reflection before fixing bug' },
+      { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' },
+      { path: '/api/recommendations/:learnerId', method: 'GET', description: 'Adaptive challenge recommendation' }
     ]
   });
 });
@@ -239,6 +249,10 @@ app.delete('/api/items/:id', (req, res) => {
 app.use('/api/challenges', challengesRouter);
 app.use('/api/submissions', submissionsRouter);
 app.use('/api/hints', hintsRouter);
+app.use('/api/ai', aiRouter);
+app.use('/api/explain-before-fix', ebyfRouter);
+app.use('/api/progress', progressRouter);
+app.use('/api/recommendations', recommendationsRouter);
 
 // 404 handler
 app.use(notFoundHandler);
