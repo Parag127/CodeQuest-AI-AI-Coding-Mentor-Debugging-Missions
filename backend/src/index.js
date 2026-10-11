@@ -3,6 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import os from 'os';
 
+import aiRouter from './routes/ai.js';
+import hintsRouter from './routes/hints.js';
+import ebyfRouter from './routes/explainBeforeFix.js';
+import progressRouter from './routes/progress.js';
+import recommendationsRouter from './routes/recommendations.js';
+
 dotenv.config();
 
 const app = express();
@@ -15,7 +21,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+// Request size limit enforcement per security rules
+app.use(express.json({ limit: '100kb' }));
+
+// CodeDNA AI & Learning Routes
+app.use('/api/ai', aiRouter);
+app.use('/api/hints', hintsRouter);
+app.use('/api/explain-before-fix', ebyfRouter);
+app.use('/api/progress', progressRouter);
+app.use('/api/recommendations', recommendationsRouter);
 
 // In-memory demo data store for hackathon starter
 let hackathonItems = [
@@ -62,7 +76,13 @@ app.get('/', (req, res) => {
       { path: '/api/items', method: 'POST', description: 'Create a new demo item' },
       { path: '/api/items/:id', method: 'DELETE', description: 'Delete item by id' },
       { path: '/api/auth/login', method: 'POST', description: 'Authenticate user session' },
-      { path: '/api/auth/register', method: 'POST', description: 'Register new user account' }
+      { path: '/api/auth/register', method: 'POST', description: 'Register new user account' },
+      { path: '/api/ai/health', method: 'GET', description: 'Gemini AI service health check' },
+      { path: '/api/ai/feedback', method: 'POST', description: 'AI diagnostic feedback after code submission' },
+      { path: '/api/hints', method: 'POST', description: 'Generate progressive AI debugging hint (Levels 1-3)' },
+      { path: '/api/explain-before-fix', method: 'POST', description: 'Learner reflection before fixing bug' },
+      { path: '/api/progress/:learnerId', method: 'GET', description: 'Learner progress & recurring mistakes' },
+      { path: '/api/recommendations/:learnerId', method: 'GET', description: 'Adaptive challenge recommendation' }
     ]
   });
 });
