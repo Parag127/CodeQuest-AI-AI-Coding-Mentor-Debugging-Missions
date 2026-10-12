@@ -2,6 +2,8 @@
 
 A production-grade, containerized full-stack application. Features an Express.js REST API backend, a Vite + React frontend styled with modern responsive UI (floating island navbar, ambient mesh glows, interactive IDE), and a deliberate debugging lab with Java/JS parity, progressive hints, and cognitive explanation gates.
 
+Working Vercel Link: https://debugmate-a1h4vyl14-st-strange.vercel.app/
+
 ---
 
 ## 🏗️ Architecture Overview
